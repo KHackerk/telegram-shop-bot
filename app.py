@@ -255,6 +255,22 @@ def login():
 @app.route("/logout")
 def logout(): session.clear(); return redirect(url_for("login"))
 
+@app.route("/emoji-pack")
+def emoji_pack():
+    # Lists a public Telegram custom-emoji pack's stickers (ids + assigned emoji chars) so
+    # the shop can map brand logo emojis to categories. Returns no secrets / file paths.
+    if not bot: return {"error": "bot off"}
+    name = request.args.get("name", "ApplicationEmoji")
+    try:
+        s = bot.get_sticker_set(name)
+        out = []
+        for i, st in enumerate(getattr(s, "stickers", []) or []):
+            out.append({"i": i, "emoji": getattr(st, "emoji", ""), "custom_emoji_id": getattr(st, "custom_emoji_id", None),
+                        "animated": bool(getattr(st, "is_animated", False)), "video": bool(getattr(st, "is_video", False))})
+        return {"pack": name, "title": getattr(s, "title", ""), "count": len(out), "stickers": out}
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {str(e)[:200]}"}
+
 @app.route("/admin")
 @login_required
 def dashboard():
