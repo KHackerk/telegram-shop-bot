@@ -130,6 +130,8 @@ def init_db():
     _cols = [r["name"] for r in c.execute("PRAGMA table_info(categories)").fetchall()]
     if "logo_id" not in _cols:
         c.execute("ALTER TABLE categories ADD COLUMN logo_id TEXT DEFAULT ''")
+    if "hidden" not in _cols:
+        c.execute("ALTER TABLE categories ADD COLUMN hidden INTEGER DEFAULT 0")
     c.executescript("""
     CREATE TABLE IF NOT EXISTS payment_methods(
       id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, details TEXT DEFAULT '',
@@ -461,7 +463,7 @@ if BOT_TOKEN:
             bot.answer_callback_query(call.id, "ဘာသာစကား ပြောင်းပြီးပါပြီ ✓" if data == "lang_my" else "Language changed ✓")
             c.close(); main_menu(call); return
         if data == "shop":
-            cats = c.execute("SELECT cat.*, (SELECT COUNT(*) FROM stock_items s JOIN products p ON p.id=s.product_id WHERE p.category_id=cat.id AND s.is_sold=0) stock FROM categories cat ORDER BY sort").fetchall()
+            cats = c.execute("SELECT cat.*, (SELECT COUNT(*) FROM stock_items s JOIN products p ON p.id=s.product_id WHERE p.category_id=cat.id AND s.is_sold=0) stock FROM categories cat WHERE COALESCE(cat.hidden,0)=0 ORDER BY sort").fetchall()
             try: cat_cols = max(1, min(2, int(get_setting("cat_cols", "2"))))
             except Exception: cat_cols = 2
             raw_rows, kb = [], InlineKeyboardMarkup(row_width=cat_cols)
@@ -634,7 +636,7 @@ if BOT_TOKEN:
         c = db()
         back = InlineKeyboardMarkup(); back.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
         if screen == "shop":
-            cats = c.execute("SELECT * FROM categories ORDER BY sort").fetchall()
+            cats = c.execute("SELECT * FROM categories WHERE COALESCE(hidden,0)=0 ORDER BY sort").fetchall()
             try: cat_cols = max(1, min(2, int(get_setting("cat_cols", "2"))))
             except Exception: cat_cols = 2
             raw_rows, kb = [], InlineKeyboardMarkup(row_width=cat_cols)
@@ -974,6 +976,14 @@ def logo_img(cid):
     except Exception:
         abort(404)
 
+@app.route("/admin/categories/<int:cid>/toggle-hidden")
+@login_required
+def cat_toggle_hidden(cid):
+    c = db(); r = c.execute("SELECT hidden FROM categories WHERE id=?", (cid,)).fetchone()
+    if r: c.execute("UPDATE categories SET hidden=? WHERE id=?", (0 if r["hidden"] else 1, cid)); c.commit()
+    c.close()
+    return redirect(request.referrer or url_for("categories"))
+
 def _delete_categories(c, ids):
     ids = [int(i) for i in ids]
     if not ids: return 0
@@ -1177,6 +1187,16 @@ def bot_ui():
                 if nm: c.execute("UPDATE categories SET name=?, emoji=?, logo_id=? WHERE id=?", (nm, em, lg, cid))
             c.commit(); c.close()
             flash("Category name / emoji / logo saved — live in the bot now.")
+        elif request.form.get("section") == "cat_add":
+            nm = request.form.get("new_cat_name", "").strip()
+            if nm:
+                c = db(); mx = c.execute("SELECT COALESCE(MAX(sort),0) m FROM categories").fetchone()["m"]
+                c.execute("INSERT INTO categories(name,emoji,sort,logo_id) VALUES(?,?,?,?)",
+                          (nm, request.form.get("new_cat_emoji", "") or "🛍️", mx + 1, request.form.get("new_cat_logo", "")))
+                c.commit(); c.close()
+                flash("Category added — it appears in the bot's Shop now (add products to it from the Products page).")
+            else:
+                flash("Category name is required.")
         elif request.form.get("section") == "pay_add":
             nm = request.form.get("pm_name", "").strip()
             if nm:
