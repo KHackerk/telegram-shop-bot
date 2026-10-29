@@ -1,5 +1,5 @@
 {% extends "base.html" %}{% block body %}
-<h1>💬 Support chat</h1><p class=sub>Customer conversations with the bot, newest first. History is recorded from when this feature was deployed.</p>
+<h1><svg class="h-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg>Support chat</h1><p class=sub>Customer conversations with the bot, newest first. History is recorded from when this feature was deployed.</p>
 {% if rows %}
 <table><tr><th>Customer</th><th>Messages</th><th>Last message</th><th>When (UTC)</th><th></th></tr>
 {% for r in rows %}<tr>

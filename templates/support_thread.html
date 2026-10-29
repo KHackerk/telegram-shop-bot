@@ -1,5 +1,5 @@
 {% extends "base.html" %}{% block body %}
-<h1>💬 {{ user.first_name if user else "Customer" }} {% if user and user.username %}@{{ user.username }}{% endif %}</h1>
+<h1><svg class="h-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg>{{ user.first_name if user else "Customer" }} {% if user and user.username %}@{{ user.username }}{% endif %}</h1>
 <p class=sub>User ID: {{ tid }} · <a href="/admin/support">← All chats</a></p>
 {% with ms = get_flashed_messages() %}{% if ms %}<div class=card style="border-color:#34d399">{{ ms[0] }}</div>{% endif %}{% endwith %}
 <div class=card>
@@ -14,7 +14,7 @@
 </div>
 <script>var cb=document.getElementById('chatbox');if(cb){cb.scrollTop=cb.scrollHeight;}</script>
 </div>
-<div class=card><h3 style="margin-top:0">✍️ Reply to this customer</h3>
+<div class=card><h3 style="margin-top:0"><svg class="h-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>Reply to this customer</h3>
 <form method=post action="/admin/support/{{ tid }}/reply" enctype="multipart/form-data">
 <div style="display:flex;gap:8px;align-items:flex-end">
 <label title="Attach a photo or file" style="flex:0 0 auto;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-size:20px;cursor:pointer;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);margin:0">📎<input type=file name=attach hidden onchange="document.getElementById('fname').textContent=this.files[0]?('📎 '+this.files[0].name):''"></label>

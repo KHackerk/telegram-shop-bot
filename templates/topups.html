@@ -1,5 +1,5 @@
 {% extends "base.html" %}{% block body %}
-<h1>💰 Top-up requests</h1>
+<h1><svg class="h-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Top-up requests</h1>
 <p class=sub>Deposit requests appear here only after the customer has chosen a payment method, transferred, and sent their payment screenshot in the bot. Approve credits the customer's balance.</p>
 <table><tr><th>ID</th><th>User</th><th>Amount</th><th>Method</th><th>Screenshot</th><th>Status</th><th>When</th><th></th></tr>
 {% for r in rows %}<tr><td>{{r.id}}</td><td>{{r.user_id}}</td><td>{{money(r.amount_cents)}}</td><td>{{r.method_name or r.method}}</td>
