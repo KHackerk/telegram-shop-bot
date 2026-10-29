@@ -70,7 +70,22 @@ def init_db():
                  "n8n":"🔗","Adobe":"🅰️","Duolingo":"🦉","Streaming":"🍿","VPN":"🛡️"}
     for _name, _em in EMOJI_MAP.items():
         c.execute("UPDATE categories SET emoji=? WHERE name=?", (_em, _name))
+    # Extra categories the owner sells (added if missing) — placeholder products, edit in admin
+    EXTRA_CATS = [("Telegram","✈️"),("Japan TikTok Account","🎵"),("WhatsApp","💬"),("Spotify","🎧")]
+    _sort = (c.execute("SELECT COALESCE(MAX(sort),0) m FROM categories").fetchone()["m"] or 0)
+    for _nm, _em in EXTRA_CATS:
+        if not c.execute("SELECT id FROM categories WHERE name=?", (_nm,)).fetchone():
+            _sort += 1
+            _cur = c.execute("INSERT INTO categories(name,emoji,sort) VALUES(?,?,?)", (_nm, _em, _sort))
+            c.execute("INSERT INTO products(category_id,name,description,price_cents) VALUES(?,?,?,?)",
+                      (_cur.lastrowid, f"{_nm} — 1 Month", "Admin: edit this product, set your real price and add stock in the dashboard.", 1000))
     c.commit(); c.close()
+
+# Animated company-logo custom emojis (Telegram pack "ApplicationEmoji"), by category name.
+# Used as icon_custom_emoji_id on Shop buttons (Bot API). Owner account is Premium.
+LOGO_EMOJI = {"ChatGPT Plus": "5359726582447487916", "Capcut Pro": "5364339557712020484",
+              "Telegram": "5330237710655306682", "Japan TikTok Account": "5327982530702359565",
+              "WhatsApp": "5334998226636390258", "Spotify": "5346074681004801565"}
 
 def money(cents): return f"${cents/100:.2f}"
 def tier(total_spent_cents):
@@ -161,11 +176,22 @@ if BOT_TOKEN:
             c.close(); main_menu(call, edit=True); return
         if data == "shop":
             cats = c.execute("SELECT cat.*, (SELECT COUNT(*) FROM stock_items s JOIN products p ON p.id=s.product_id WHERE p.category_id=cat.id AND s.is_sold=0) stock FROM categories cat ORDER BY sort").fetchall()
-            kb = InlineKeyboardMarkup(row_width=2)
+            rows, kb = [], InlineKeyboardMarkup(row_width=2)
             for cat in cats:
                 cnt = c.execute("SELECT COUNT(*) n FROM products WHERE category_id=? AND active=1", (cat["id"],)).fetchone()["n"]
-                kb.add(InlineKeyboardButton(f"{cat['emoji']} {cat['name']} ({cnt})", callback_data=f"cat_{cat['id']}"))
-            kb.add(InlineKeyboardButton("⬅️ Back", callback_data="home")); show(f"<b>🛍️ {SHOP_NAME}</b>\nChoose a category:", kb)
+                logo = LOGO_EMOJI.get(cat["name"])
+                if logo:
+                    rows.append([{"text": f"{cat['name']} ({cnt})", "callback_data": f"cat_{cat['id']}", "icon_custom_emoji_id": logo}])
+                else:
+                    rows.append([{"text": f"{cat['emoji']} {cat['name']} ({cnt})", "callback_data": f"cat_{cat['id']}"}])
+                kb.add(InlineKeyboardButton(rows[-1][0]["text"] if not logo else f"{cat['emoji']} {cat['name']} ({cnt})", callback_data=f"cat_{cat['id']}"))
+            rows.append([{"text": "⬅️ Back", "callback_data": "home"}])
+            kb.add(InlineKeyboardButton("⬅️ Back", callback_data="home"))
+            import json as _json
+            try:
+                show(f"<b>🛍️ {SHOP_NAME}</b>\nChoose a category:", _json.dumps({"inline_keyboard": rows}))
+            except Exception:
+                show(f"<b>🛍️ {SHOP_NAME}</b>\nChoose a category:", kb)
         elif data.startswith("cat_"):
             cid = int(data[4:]); prods = c.execute("SELECT * FROM products WHERE category_id=? AND active=1", (cid,)).fetchall()
             kb = InlineKeyboardMarkup(row_width=1)
