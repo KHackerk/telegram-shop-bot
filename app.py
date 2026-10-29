@@ -12,7 +12,7 @@ from flask import Flask, request, session, redirect, url_for, render_template, f
 
 DB_PATH = os.environ.get("DATABASE_PATH", os.path.join(os.path.dirname(__file__), "shop.db"))
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")  # change on Render!
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD") or "admin123"  # empty env var must not become the password; change on Render!
 SHOP_NAME = os.environ.get("SHOP_NAME", "My Digital Shop")
 
 app = Flask(__name__)
