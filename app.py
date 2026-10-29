@@ -252,7 +252,7 @@ STRINGS = {
  "orders_line": "Orders: Pending: {p} · Delivered: {d} · Confirmed: {cf}", "invite_link": "Your invite link",
  "back": "⬅️ Back", "cancel": "❌ Cancel", "home": "🏠 Menu",
  "wallet_body": "<b>💳 Top up the balance</b>\n\n{balance_label}: <b>{bal}</b>\n\n<b>How to top up:</b>\n1️⃣ Tap ➕ Deposit below\n2️⃣ Type the amount (MMK)\n3️⃣ Choose a payment method and transfer\n4️⃣ Send your payment screenshot\n\n✅ After the admin checks and approves it, the money lands in your balance.",
- "balance_body": "<b>💰 My balance</b>\n\n{balance_label}: <b>{bal}</b>\n{total_spent_label}: {spent}\n{tier_label}: <b>{tier}</b>",
+ "balance_body": "<b>💰 My balance</b>\n\n{balance_label}: <b>{bal}</b>\n{total_spent_label}: {spent}",
  "deposit_btn": "➕ Deposit",
  "dep_prompt": "<b>💰 Deposit</b>\n\nType the amount you want to deposit in MMK — e.g. <b>5000</b> or <b>50000</b>.",
  "dep_choose": "<b>💰 Deposit {amt}</b>\n\nChoose a payment method:",
@@ -286,7 +286,7 @@ STRINGS = {
  "orders_line": "အော်ဒါများ: စောင့်ဆိုင်းဆဲ {p} · ပို့ပြီး {d} · အတည်ပြုပြီး {cf}", "invite_link": "သင့်ဖိတ်ကြားလင့်",
  "back": "⬅️ နောက်သို့", "cancel": "❌ ပယ်ဖျက်ရန်", "home": "🏠 ပင်မ",
  "wallet_body": "<b>💳 လက်ကျန်ငွေ ဖြည့်ရန်</b>\n\n{balance_label}: <b>{bal}</b>\n\n<b>ငွေဖြည့်နည်း:</b>\n1️⃣ အောက်က ➕ Deposit ကို နှိပ်ပါ\n2️⃣ ဖြည့်မယ့် ပမာဏ (MMK) ရိုက်ပါ\n3️⃣ Payment method ရွေးပြီး ငွေလွှဲပါ\n4️⃣ Payment screenshot ပို့ပါ\n\n✅ Admin စစ်ဆေး အတည်ပြုပြီးရင် လက်ကျန်ငွေထဲ ရောက်ပါမယ်။",
- "balance_body": "<b>💰 ကျွန်ုပ်၏ လက်ကျန်ငွေ</b>\n\n{balance_label}: <b>{bal}</b>\n{total_spent_label}: {spent}\n{tier_label}: <b>{tier}</b>",
+ "balance_body": "<b>💰 ကျွန်ုပ်၏ လက်ကျန်ငွေ</b>\n\n{balance_label}: <b>{bal}</b>\n{total_spent_label}: {spent}",
  "deposit_btn": "➕ Deposit",
  "dep_prompt": "<b>💰 ငွေဖြည့်ခြင်း</b>\n\nဖြည့်သွင်းမယ့် ပမာဏကို MMK ဖြင့် ရိုက်ပါ — ဥပမာ <b>5000</b> သို့မဟုတ် <b>50000</b>။",
  "dep_choose": "<b>💰 Deposit {amt}</b>\n\nPayment method ရွေးပါ:",
@@ -372,17 +372,11 @@ if BOT_TOKEN:
                   for s in ("pending","delivered","confirmed")}
         c.close()
         uid = u["telegram_id"]
-        t = tier(u["total_spent_cents"])
-        to_next = max(0, 10000000 - u["total_spent_cents"]) if t == "Bronze" else 0
         username = f"@{hesc(u['username'])}" if u["username"] else "-"
-        try: bot_name = bot.get_me().username
-        except: bot_name = "your_bot"
         text = (f"<b>{hesc(u['first_name'] or '') or username}</b>\n\n"
-                f"{tr(uid, 'tier')}: <b>{t}</b>\nUser ID: <code>{u['telegram_id']}</code>\nUsername: {username}\n\n"
+                f"User ID: <code>{u['telegram_id']}</code>\nUsername: {username}\n\n"
                 f"{tr(uid, 'balance')}: <b>{money(u['balance_cents'])}</b> · {tr(uid, 'total_spent')}: {money(u['total_spent_cents'])}\n"
-                + (tr(uid, 'to_silver').format(x=money(to_next)) + "\n" if t=="Bronze" else "")
-                + tr(uid, 'orders_line').format(p=counts['pending'], d=counts['delivered'], cf=counts['confirmed']) + "\n\n"
-                f"{tr(uid, 'invite_link')}: https://t.me/{bot_name}?start=ref_{u['telegram_id']}")
+                + tr(uid, 'orders_line').format(p=counts['pending'], d=counts['delivered'], cf=counts['confirmed']))
         kb = ReplyKeyboardMarkup(resize_keyboard=True, is_persistent=True, row_width=2)
         kb.add(KeyboardButton(tr(uid, 'menu_shop')), KeyboardButton(tr(uid, 'menu_orders')))
         kb.add(KeyboardButton(tr(uid, 'menu_wallet')), KeyboardButton(tr(uid, 'menu_balance')))
@@ -467,24 +461,33 @@ if BOT_TOKEN:
             kb = InlineKeyboardMarkup(row_width=prod_cols)
             for p in prods:
                 stock = c.execute("SELECT COUNT(*) n FROM stock_items WHERE product_id=? AND is_sold=0", (p["id"],)).fetchone()["n"]
+                total = c.execute("SELECT COUNT(*) n FROM stock_items WHERE product_id=?", (p["id"],)).fetchone()["n"]
                 if stock > 0:
                     kb.add(InlineKeyboardButton(f"{p['name']} — {money(p['price_cents'])} · stock {stock}", callback_data=f"prod_{p['id']}"))
-                else:
+                elif total > 0:
                     kb.add(InlineKeyboardButton(f"{p['name']} — {money(p['price_cents'])} · {tr(uid, 'out_of_stock')}", callback_data=f"prod_{p['id']}"))
+                else:
+                    kb.add(InlineKeyboardButton(f"{p['name']} — {money(p['price_cents'])}", callback_data=f"prod_{p['id']}"))
             kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop")); show("<b>Products</b>", kb)
         elif data.startswith("prod_"):
             pid = int(data[5:]); p = c.execute("SELECT * FROM products WHERE id=?", (pid,)).fetchone()
             stock = c.execute("SELECT COUNT(*) n FROM stock_items WHERE product_id=? AND is_sold=0", (pid,)).fetchone()["n"]
+            total = c.execute("SELECT COUNT(*) n FROM stock_items WHERE product_id=?", (pid,)).fetchone()["n"]
             kb = InlineKeyboardMarkup(row_width=2)
             if stock > 0:
                 kb.add(InlineKeyboardButton("✅ Buy now", callback_data=f"buy_{pid}"),
                        InlineKeyboardButton("❤️ Save", callback_data=f"save_{pid}"))
                 kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop"))
                 show(f"<b>{p['name']}</b>\n\n{p['description']}\n\nPrice: <b>{money(p['price_cents'])}</b>\nStock: {stock}", kb)
-            else:
+            elif total > 0:
                 kb.add(InlineKeyboardButton(tr(uid, 'out_of_stock'), callback_data="oos"))
                 kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop"))
                 show(f"<b>{p['name']}</b>\n\n{p['description']}\n\nPrice: <b>{money(p['price_cents'])}</b>\n{tr(uid, 'out_of_stock')}", kb)
+            else:
+                kb.add(InlineKeyboardButton("✅ Buy now", callback_data=f"buy_{pid}"),
+                       InlineKeyboardButton("❤️ Save", callback_data=f"save_{pid}"))
+                kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop"))
+                show(f"<b>{p['name']}</b>\n\n{p['description']}\n\nPrice: <b>{money(p['price_cents'])}</b>", kb)
         elif data == "oos":
             bot.answer_callback_query(call.id, tr(uid, 'oos_alert'), show_alert=True); c.close(); return
         elif data.startswith("save_"):
@@ -495,14 +498,19 @@ if BOT_TOKEN:
             u = c.execute("SELECT * FROM users WHERE telegram_id=?", (call.from_user.id,)).fetchone()
             if not u: bot.answer_callback_query(call.id, "Send /start first"); c.close(); return
             item = c.execute("SELECT * FROM stock_items WHERE product_id=? AND is_sold=0 ORDER BY id LIMIT 1", (pid,)).fetchone()
-            if not item:
+            total = c.execute("SELECT COUNT(*) n FROM stock_items WHERE product_id=?", (pid,)).fetchone()["n"]
+            if not item and total > 0:
                 bot.answer_callback_query(call.id, tr(uid, 'oos_alert'), show_alert=True); c.close(); return
             if u["balance_cents"] < p["price_cents"]:
                 show(f"❌ Not enough balance.\nYou have {money(u['balance_cents'])}, need {money(p['price_cents'])}.\nTop up from 💳 Top up the balance — admin will approve it.", back); c.close(); return
             c.execute("UPDATE users SET balance_cents=balance_cents-?, total_spent_cents=total_spent_cents+? WHERE telegram_id=?", (p["price_cents"], p["price_cents"], call.from_user.id))
-            cur = c.execute("INSERT INTO orders(user_id,product_id,price_cents,status,delivery) VALUES(?,?,?,'delivered',?)", (call.from_user.id, pid, p["price_cents"], item["content"]))
-            c.execute("UPDATE stock_items SET is_sold=1, order_id=? WHERE id=?", (cur.lastrowid, item["id"])); c.commit()
-            show(f"✅ <b>Order #{cur.lastrowid} delivered</b>\n\n{item['content']}", back)
+            if item:
+                cur = c.execute("INSERT INTO orders(user_id,product_id,price_cents,status,delivery) VALUES(?,?,?,'delivered',?)", (call.from_user.id, pid, p["price_cents"], item["content"]))
+                c.execute("UPDATE stock_items SET is_sold=1, order_id=? WHERE id=?", (cur.lastrowid, item["id"])); c.commit()
+                show(f"✅ <b>Order #{cur.lastrowid} delivered</b>\n\n{item['content']}", back)
+            else:
+                cur = c.execute("INSERT INTO orders(user_id,product_id,price_cents,status) VALUES(?,?,?,'pending')", (call.from_user.id, pid, p["price_cents"])); c.commit()
+                show(f"✅ <b>Order #{cur.lastrowid} created (Pending)</b>\nAdmin will deliver it soon. Check My orders.", back)
         elif data == "orders":
             rows = c.execute("SELECT o.*, p.name FROM orders o LEFT JOIN products p ON p.id=o.product_id WHERE o.user_id=? ORDER BY o.id DESC LIMIT 20", (call.from_user.id,)).fetchall()
             txt = tr(uid, 'orders_title') + "\n\n" + ("\n".join(f"#{r['id']} · {r['name']} · {money(r['price_cents'])} · <b>{r['status']}</b>" + (f"\n{r['delivery']}" if r["delivery"] else "") for r in rows) or tr(uid, 'orders_empty'))
@@ -936,7 +944,7 @@ def products():
         else:
             c.execute("INSERT INTO products(category_id,name,description,price_cents) VALUES(?,?,?,?)",
                       (request.form["category_id"], request.form["name"], request.form.get("description",""), int(float(request.form["price"])*100))); c.commit()
-    rows = c.execute("SELECT p.*, cat.name cat, (SELECT COUNT(*) FROM stock_items s WHERE s.product_id=p.id AND s.is_sold=0) stock FROM products p LEFT JOIN categories cat ON cat.id=p.category_id ORDER BY p.id DESC").fetchall()
+    rows = c.execute("SELECT p.*, cat.name cat, (SELECT COUNT(*) FROM stock_items s WHERE s.product_id=p.id AND s.is_sold=0) stock, (SELECT COUNT(*) FROM stock_items s WHERE s.product_id=p.id) stock_total FROM products p LEFT JOIN categories cat ON cat.id=p.category_id ORDER BY p.id DESC").fetchall()
     cats = c.execute("SELECT * FROM categories").fetchall(); c.close()
     return render_template("products.html", rows=rows, cats=cats, money=money, shop=SHOP_NAME)
 
