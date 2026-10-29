@@ -61,6 +61,23 @@ def init_db():
     _cols = [r["name"] for r in c.execute("PRAGMA table_info(categories)").fetchall()]
     if "logo_id" not in _cols:
         c.execute("ALTER TABLE categories ADD COLUMN logo_id TEXT DEFAULT ''")
+    c.executescript("""
+    CREATE TABLE IF NOT EXISTS payment_methods(
+      id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, details TEXT DEFAULT '',
+      active INTEGER DEFAULT 1, sort INTEGER DEFAULT 0);
+    CREATE TABLE IF NOT EXISTS topup_sessions(
+      telegram_id INTEGER PRIMARY KEY, step TEXT DEFAULT '', amount_cents INTEGER DEFAULT 0, method_id INTEGER DEFAULT 0);
+    """)
+    _tcols = [r["name"] for r in c.execute("PRAGMA table_info(topups)").fetchall()]
+    if "method_name" not in _tcols:
+        c.execute("ALTER TABLE topups ADD COLUMN method_name TEXT DEFAULT ''")
+    if "screenshot" not in _tcols:
+        c.execute("ALTER TABLE topups ADD COLUMN screenshot BLOB")
+    if c.execute("SELECT COUNT(*) n FROM payment_methods").fetchone()["n"] == 0:
+        c.executemany("INSERT INTO payment_methods(name,details,active,sort) VALUES(?,?,1,?)", [
+          ("KBZ Pay", "Phone: 09 XXX XXX XXX\nName: Your Name\n(Edit this in Admin \u2192 Bot UI \u2192 Payment Methods)", 1),
+          ("Wave Money", "Phone: 09 XXX XXX XXX\nName: Your Name\n(Edit this in Admin \u2192 Bot UI \u2192 Payment Methods)", 2),
+        ])
     if c.execute("SELECT COUNT(*) n FROM categories").fetchone()["n"] == 0:
         seed = [
             ("ChatGPT Plus","🌀"),("Capcut Pro","✂️"),("Mail Box","📧"),("Figma","🖌️"),
@@ -137,6 +154,21 @@ def get_setting(key, default=""):
 
 def set_setting(key, value):
     c = db(); c.execute("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, str(value))); c.commit(); c.close()
+
+def tget(tid):
+    c = db(); r = c.execute("SELECT * FROM topup_sessions WHERE telegram_id=?", (tid,)).fetchone(); c.close(); return r
+
+def tset(tid, step, amount=None, method_id=None):
+    cur = tget(tid)
+    a = amount if amount is not None else (cur["amount_cents"] if cur else 0)
+    mid = method_id if method_id is not None else (cur["method_id"] if cur else 0)
+    c = db()
+    c.execute("INSERT INTO topup_sessions(telegram_id,step,amount_cents,method_id) VALUES(?,?,?,?) "
+              "ON CONFLICT(telegram_id) DO UPDATE SET step=excluded.step, amount_cents=excluded.amount_cents, method_id=excluded.method_id",
+              (tid, step, a, mid)); c.commit(); c.close()
+
+def tclear(tid):
+    c = db(); c.execute("DELETE FROM topup_sessions WHERE telegram_id=?", (tid,)); c.commit(); c.close()
 
 def log_chat(user_id, direction, text):
     try:
@@ -293,12 +325,45 @@ if BOT_TOKEN:
             show(txt, back)
         elif data == "wallet":
             u = c.execute("SELECT * FROM users WHERE telegram_id=?", (call.from_user.id,)).fetchone()
-            kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton("➕ Add $10 (request top-up)", callback_data="topup_1000"))
+            kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton("➕ Deposit", callback_data="dep_start"))
             kb.add(InlineKeyboardButton("⬅️ Back", callback_data="home"))
-            show(f"<b>💳 Wallet</b>\nBalance: <b>{money(u['balance_cents']) if u else '$0.00'}</b>\n\nTop-ups are approved by admin in the web dashboard.", kb)
-        elif data.startswith("topup_"):
-            amt = int(data[6:]); c.execute("INSERT INTO topups(user_id,amount_cents,method) VALUES(?,?,'manual')", (call.from_user.id, amt)); c.commit()
-            show("✅ Top-up request sent. Admin will approve after you pay them.", back)
+            show(f"<b>💳 Wallet</b>\nBalance: <b>{money(u['balance_cents']) if u else '$0.00'}</b>\n\nTap ➕ Deposit, enter an amount, choose a payment method, transfer, then send your payment screenshot. The admin approves deposits in the dashboard.", kb)
+        elif data == "dep_start" or data.startswith("topup_"):
+            tset(call.from_user.id, "amount", amount=0, method_id=0)
+            kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton("❌ Cancel", callback_data="dep_cancel"))
+            show("<b>💰 Deposit</b>\n\nType the amount you want to deposit in USD — e.g. <b>25</b> or <b>25.50</b>.", kb)
+        elif data == "dep_cancel":
+            tclear(call.from_user.id)
+            show("❌ Deposit cancelled.", back)
+        elif data == "dep_methods":
+            s = tget(call.from_user.id); amt = s["amount_cents"] if s else 0
+            ms = c.execute("SELECT * FROM payment_methods WHERE active=1 ORDER BY sort,id").fetchall()
+            if not ms:
+                show("⚠️ No payment methods are available yet. Please contact the admin.", back)
+            else:
+                kb = InlineKeyboardMarkup()
+                for mth in ms: kb.add(InlineKeyboardButton(f"💳 {mth['name']}", callback_data=f"dep_method_{mth['id']}"))
+                kb.add(InlineKeyboardButton("❌ Cancel", callback_data="dep_cancel"))
+                show(f"<b>💰 Deposit {money(amt)}</b>\n\nChoose a payment method:", kb)
+        elif data.startswith("dep_method_"):
+            mid = int(data[11:]); m = c.execute("SELECT * FROM payment_methods WHERE id=? AND active=1", (mid,)).fetchone()
+            if not m: show("⚠️ That payment method is no longer available.", back)
+            else:
+                tset(call.from_user.id, "confirm", method_id=mid)
+                s = tget(call.from_user.id); amt = s["amount_cents"] if s else 0
+                kb = InlineKeyboardMarkup()
+                kb.add(InlineKeyboardButton("✅ I have transferred", callback_data="dep_done"))
+                kb.add(InlineKeyboardButton("⬅️ Payment methods", callback_data="dep_methods"))
+                kb.add(InlineKeyboardButton("❌ Cancel", callback_data="dep_cancel"))
+                show(f"<b>💳 {hesc(m['name'])}</b>\n\n{hesc(m['details'])}\n\nAmount to transfer: <b>{money(amt)}</b>\n\nTransfer the amount, then tap ✅ I have transferred.", kb)
+        elif data == "dep_done":
+            s = tget(call.from_user.id)
+            if s and s["step"] == "confirm":
+                tset(call.from_user.id, "screenshot")
+                kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton("❌ Cancel", callback_data="dep_cancel"))
+                show("📸 Now please <b>send your payment screenshot</b> as a photo in this chat.", kb)
+            else:
+                show("⚠️ Please start again from Wallet → Deposit.", back)
         elif data == "invite":
             try: bot_name = bot.get_me().username
             except: bot_name = "your_bot"
@@ -315,6 +380,52 @@ if BOT_TOKEN:
         elif data == "settings":
             show("<b>⚙️ Settings</b>\nLanguage and notifications are coming in the admin dashboard update.", back)
         c.close()
+
+    @bot.message_handler(content_types=["photo"])
+    def dep_photo(msg):
+        s = tget(msg.from_user.id)
+        if not s or s["step"] != "screenshot" or not s["amount_cents"]: return
+        try:
+            data = bot.download_file(bot.get_file(msg.photo[-1].file_id).file_path)
+        except Exception:
+            bot.send_message(msg.chat.id, "⚠️ Could not read that photo — please send the screenshot again.")
+            return
+        c = db(); m = c.execute("SELECT * FROM payment_methods WHERE id=?", (s["method_id"],)).fetchone()
+        mname = m["name"] if m else ""
+        c.execute("INSERT INTO topups(user_id,amount_cents,method,method_name,screenshot) VALUES(?,?,?,?,?)",
+                  (msg.from_user.id, s["amount_cents"], mname, mname, data)); c.commit(); c.close()
+        tclear(msg.from_user.id)
+        log_chat(msg.from_user.id, "in", "📷 Payment screenshot")
+        txt = ("✅ <b>Deposit request received!</b>\n\n"
+               f"Amount: <b>{money(s['amount_cents'])}</b>\nMethod: <b>{hesc(mname)}</b>\n\n"
+               "The admin will check your screenshot and credit your balance. You can see it in 💳 Wallet.")
+        log_chat(msg.from_user.id, "out", plain(txt))
+        kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton("🏠 Menu", callback_data="home"))
+        bot.send_message(msg.chat.id, txt, reply_markup=kb)
+
+    @bot.message_handler(func=lambda m: bool(m.text) and not m.text.startswith("/"), content_types=["text"])
+    def dep_text(msg):
+        s = tget(msg.from_user.id)
+        if not s: return
+        if s["step"] == "amount":
+            raw = (msg.text or "").replace("$", "").replace(",", "").strip()
+            try: cents = int(round(float(raw) * 100))
+            except Exception: cents = 0
+            if cents <= 0:
+                bot.send_message(msg.chat.id, "⚠️ Please type a valid amount, e.g. 25")
+                return
+            tset(msg.from_user.id, "method", amount=cents)
+            c = db(); ms = c.execute("SELECT * FROM payment_methods WHERE active=1 ORDER BY sort,id").fetchall(); c.close()
+            kb = InlineKeyboardMarkup()
+            for mth in ms: kb.add(InlineKeyboardButton(f"💳 {mth['name']}", callback_data=f"dep_method_{mth['id']}"))
+            kb.add(InlineKeyboardButton("❌ Cancel", callback_data="dep_cancel"))
+            txt = f"<b>💰 Deposit {money(cents)}</b>\n\nChoose a payment method:"
+            log_chat(msg.from_user.id, "out", plain(txt))
+            bot.send_message(msg.chat.id, txt, reply_markup=kb)
+        elif s["step"] == "screenshot":
+            bot.send_message(msg.chat.id, "📸 Please send the screenshot as a <b>photo</b> (not text).")
+        elif s["step"] in ("method", "confirm"):
+            bot.send_message(msg.chat.id, "👆 Please tap the buttons above to continue your deposit — or open 💳 Wallet to cancel.")
 
     @app.route(f"/webhook", methods=["POST"])
     def webhook():
@@ -627,6 +738,14 @@ def topups():
     c = db(); rows = c.execute("SELECT * FROM topups ORDER BY id DESC").fetchall(); c.close()
     return render_template("topups.html", rows=rows, money=money, shop=SHOP_NAME)
 
+@app.route("/admin/topups/<int:tid>/img")
+@login_required
+def topup_img(tid):
+    c = db(); r = c.execute("SELECT screenshot FROM topups WHERE id=?", (tid,)).fetchone(); c.close()
+    if not r or not r["screenshot"]: abort(404)
+    from flask import Response
+    return Response(r["screenshot"], mimetype="image/jpeg")
+
 @app.route("/admin/bot-ui", methods=["GET","POST"])
 @login_required
 def bot_ui():
@@ -649,11 +768,33 @@ def bot_ui():
                 if nm: c.execute("UPDATE categories SET name=?, emoji=?, logo_id=? WHERE id=?", (nm, em, lg, cid))
             c.commit(); c.close()
             flash("Category name / emoji / logo saved — live in the bot now.")
+        elif request.form.get("section") == "pay_add":
+            nm = request.form.get("pm_name", "").strip()
+            if nm:
+                c = db(); mx = c.execute("SELECT COALESCE(MAX(sort),0) m FROM payment_methods").fetchone()["m"]
+                c.execute("INSERT INTO payment_methods(name,details,active,sort) VALUES(?,?,1,?)",
+                          (nm, request.form.get("pm_details", ""), mx + 1)); c.commit(); c.close()
+                flash("Payment method added — customers can use it in the bot now.")
+            else:
+                flash("Payment method name is required.")
+        elif request.form.get("section") == "pay_one":
+            pmid = request.form.get("pm_id", "")
+            c = db()
+            if request.form.get("act") == "delete":
+                c.execute("DELETE FROM payment_methods WHERE id=?", (pmid,))
+                flash("Payment method deleted.")
+            else:
+                c.execute("UPDATE payment_methods SET name=?, details=?, active=? WHERE id=?",
+                          (request.form.get("pm_name", "").strip() or "Method", request.form.get("pm_details", ""),
+                           1 if request.form.get("pm_active") else 0, pmid))
+                flash("Payment method saved — live in the bot now.")
+            c.commit(); c.close()
         return redirect(url_for("bot_ui"))
-    c = db(); cats = c.execute("SELECT * FROM categories ORDER BY sort,id").fetchall(); c.close()
+    c = db(); cats = c.execute("SELECT * FROM categories ORDER BY sort,id").fetchall()
+    pmethods = c.execute("SELECT * FROM payment_methods ORDER BY sort,id").fetchall(); c.close()
     logos = {r["id"]: cat_logo(r) for r in cats}
     brands = {r["id"]: (r["name"] in BRAND_LOGOS) for r in cats}
-    return render_template("bot_ui.html", cats=cats, logos=logos, brands=brands, logo_options=LOGO_OPTIONS,
+    return render_template("bot_ui.html", cats=cats, logos=logos, brands=brands, logo_options=LOGO_OPTIONS, pmethods=pmethods,
                            cat_cols=get_setting("cat_cols", "2"), prod_cols=get_setting("prod_cols", "1"),
                            shop_title=get_setting("shop_title", ""), shop_subtitle=get_setting("shop_subtitle", ""),
                            show_counts=get_setting("show_counts", "1"), shop=SHOP_NAME)
