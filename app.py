@@ -47,6 +47,8 @@ def init_db():
     CREATE TABLE IF NOT EXISTS topups(
       id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, amount_cents INTEGER,
       method TEXT DEFAULT '', status TEXT DEFAULT 'pending', created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS events(
+      id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT, detail TEXT, ts TEXT DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE IF NOT EXISTS saved(
       user_id INTEGER, product_id INTEGER, PRIMARY KEY(user_id, product_id));
     """)
@@ -71,12 +73,18 @@ def tier(total_spent_cents):
 
 init_db()
 
+def log_event(kind, detail=""):
+    try:
+        c = db(); c.execute("INSERT INTO events(kind,detail) VALUES(?,?)", (kind, str(detail)[:300])); c.commit(); c.close()
+    except Exception:
+        pass
+
 # ---------- Telegram Bot (optional until BOT_TOKEN is set) ----------
 bot = None
 if BOT_TOKEN:
     import telebot
     from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
-    bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML")
+    bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML", threaded=False)
 
     def get_user(msg):
         c = db(); u = c.execute("SELECT * FROM users WHERE telegram_id=?", (msg.from_user.id,)).fetchone()
@@ -125,7 +133,14 @@ if BOT_TOKEN:
             bot.send_message(chat_id, text, reply_markup=kb)
 
     @bot.message_handler(commands=["start"])
-    def start(msg): main_menu(msg)
+    def start(msg):
+        log_event("start_received", f"user={msg.from_user.id}")
+        try:
+            main_menu(msg); log_event("start_reply_sent", f"user={msg.from_user.id}")
+        except Exception as e:
+            log_event("start_reply_failed", f"{type(e).__name__}: {e}")
+            print(f"[bot] /start handler failed: {type(e).__name__}: {e}", flush=True)
+            raise
 
     @bot.message_handler(commands=["menu"])
     def menu(msg): main_menu(msg)
@@ -342,8 +357,9 @@ def bot_status():
     try:
         me = bot.get_me()
         info = bot.get_webhook_info()
-        c = db(); n = c.execute("SELECT COUNT(*) n FROM users").fetchone()["n"]; c.close()
-        return {"bot": True, "bot_username": me.username, "bot_id": me.id, "db_users": n,
+        c = db(); n = c.execute("SELECT COUNT(*) n FROM users").fetchone()["n"]
+        ev = [dict(r) for r in c.execute("SELECT kind, detail, ts FROM events ORDER BY id DESC LIMIT 5").fetchall()]; c.close()
+        return {"bot": True, "bot_username": me.username, "bot_id": me.id, "db_users": n, "events": ev,
                 "webhook_url": info.url or "", "pending_updates": info.pending_update_count,
                 "last_error": info.last_error_message or "", "max_connections": info.max_connections}
     except Exception as e:
