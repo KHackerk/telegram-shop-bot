@@ -1,1 +1,12 @@
-{% extends "base.html" %}{% block body %}<h1>Dashboard</h1><div class=card>Users: {{s.users}} · Orders: {{s.orders}} · Revenue: {{money(s.revenue)}}<br>Pending orders: {{s.pending_orders}} · Pending top-ups: {{s.pending_topups}}</div><div class=card>Bot status: check <a href=/health style="color:#93c5fd">/health</a>. Add categories → products → stock, then users can buy in Telegram.</div>{% endblock %}
+{% extends "base.html" %}{% block body %}
+<h1>Good evening, Admin</h1>
+<p class=sub>Here's what's happening across your shop today.</p>
+<div class=stats>
+  <div class=stat><div class=row><span>Users</span><span class=icon>👥</span></div><h2>{{s.users}}</h2><div class="up">↗ Active shoppers</div></div>
+  <div class=stat><div class=row><span>Orders</span><span class=icon>🛍️</span></div><h2>{{s.orders}}</h2><div class="up">↗ {{s.pending_orders}} pending</div></div>
+  <div class=stat><div class=row><span>Revenue</span><span class=icon>💲</span></div><h2>{{money(s.revenue)}}</h2><div class="up">↗ Total earned</div></div>
+  <div class=stat><div class=row><span>Top-ups</span><span class=icon>💳</span></div><h2>{{s.pending_topups}}</h2><div style="color:var(--dim)">Waiting for approval</div></div>
+</div>
+<div class=card><b>✦ Get started</b><br><span style="color:var(--dim)">Add categories → products → stock, then users can buy in Telegram. Bot status: check <a href=/health>/health</a> — bot:true means your Telegram bot is live.</span></div>
+<div class=card><b>⚡ Quick actions</b><br><br><a class=btn href=/admin/products>Add a product</a> <a class=btn href=/admin/stock>Add stock</a> <a class=btn href=/admin/orders>Review orders</a> <a class=btn href=/admin/topups>Approve top-ups</a></div>
+{% endblock %}

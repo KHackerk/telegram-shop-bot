@@ -1,3 +1,42 @@
 <!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
-<title>{{shop}} Admin</title><style>body{font-family:system-ui;background:#0f172a;color:#e2e8f0;margin:0}nav{background:#1e293b;padding:14px}nav a{color:#93c5fd;margin-right:16px;text-decoration:none}.wrap{max-width:1000px;margin:auto;padding:20px}.card{background:#1e293b;border-radius:12px;padding:16px;margin:12px 0}input,select,textarea{padding:9px;border-radius:8px;border:1px solid #475569;background:#0f172a;color:#fff;width:100%;margin:5px 0}button,.btn{background:#22c55e;color:#fff;border:0;padding:9px 16px;border-radius:8px;cursor:pointer;text-decoration:none}table{width:100%;border-collapse:collapse}td,th{padding:8px;border-bottom:1px solid #334155;text-align:left}.red{background:#ef4444}</style>
-<nav><b>{{shop}} Admin</b> &nbsp; <a href=/admin>Dashboard</a><a href=/admin/categories>Categories</a><a href=/admin/products>Products</a><a href=/admin/stock>Stock</a><a href=/admin/orders>Orders</a><a href=/admin/users>Users</a><a href=/admin/topups>Top-ups</a><a href=/logout>Logout</a></nav><div class=wrap>{% block body %}{% endblock %}</div>
+<title>{{shop}} Admin — Glassy</title>
+<style>
+*{box-sizing:border-box}
+:root{--glass:rgba(255,255,255,.16);--stroke:rgba(255,255,255,.35);--txt:#fff;--dim:rgba(255,255,255,.75);--green:#34d399}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--txt);margin:0;min-height:100vh;background:#5b7a9d}
+body::before{content:"";position:fixed;inset:0;z-index:-2;background:linear-gradient(180deg,rgba(38,64,96,.22),rgba(20,28,40,.32)),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='900' viewBox='0 0 1600 900'%3E%3Cdefs%3E%3ClinearGradient id='s' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%237fa8cf'/%3E%3Cstop offset='.45' stop-color='%23d9b48c'/%3E%3Cstop offset='.7' stop-color='%23a97e5f'/%3E%3Cstop offset='1' stop-color='%235e4633'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1600' height='900' fill='url(%23s)'/%3E%3Cpolygon points='0,520 260,330 520,500 760,300 1040,520 1280,360 1600,540 1600,900 0,900' fill='%234a6076' opacity='.55'/%3E%3Cpolygon points='0,620 300,460 620,640 920,440 1240,660 1600,500 1600,900 0,900' fill='%23333f4e' opacity='.65'/%3E%3Crect y='700' width='1600' height='200' fill='%23423325' opacity='.8'/%3E%3C/svg%3E") center/cover no-repeat fixed}
+@keyframes floatUp{from{opacity:0;transform:translateY(26px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.glass,.card,table{background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);border:1px solid var(--stroke);border-radius:20px;box-shadow:0 18px 50px rgba(10,20,35,.28),inset 0 1px 0 rgba(255,255,255,.35)}
+nav.top{position:sticky;top:14px;z-index:10;display:flex;flex-wrap:wrap;gap:4px;align-items:center;justify-content:center;width:fit-content;max-width:96vw;margin:14px auto;padding:8px 12px;border-radius:999px;background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);border:1px solid var(--stroke);box-shadow:0 18px 50px rgba(10,20,35,.28);animation:fadeIn .8s ease both}
+nav.top b{margin:0 10px 0 4px}
+nav.top a{color:var(--txt);text-decoration:none;padding:8px 14px;border-radius:999px;font-size:14px;transition:all .3s cubic-bezier(.22,1,.36,1)}
+nav.top a:hover{background:rgba(255,255,255,.22);transform:translateY(-2px)}
+.wrap{max-width:1080px;margin:0 auto;padding:22px 16px 44px}
+h1{font-size:clamp(26px,4vw,40px);margin:8px 0 4px;animation:floatUp .7s cubic-bezier(.22,1,.36,1) both}
+.sub{color:var(--dim);animation:floatUp .7s .08s cubic-bezier(.22,1,.36,1) both}
+.card{padding:18px;margin:14px 0;animation:floatUp .7s cubic-bezier(.22,1,.36,1) both;transition:transform .35s cubic-bezier(.22,1,.36,1),background .35s}
+.card:hover{transform:translateY(-5px);background:rgba(255,255,255,.20)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin:16px 0}
+.stat{padding:20px;border-radius:20px;background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);border:1px solid var(--stroke);box-shadow:0 18px 50px rgba(10,20,35,.25);animation:floatUp .7s cubic-bezier(.22,1,.36,1) both;transition:transform .35s cubic-bezier(.22,1,.36,1)}
+.stat:nth-child(2){animation-delay:.08s}.stat:nth-child(3){animation-delay:.16s}.stat:nth-child(4){animation-delay:.24s}
+.stat:hover{transform:translateY(-5px)}
+.stat .row{display:flex;justify-content:space-between;align-items:center;color:var(--dim);font-size:14px}
+.stat h2{font-size:30px;margin:10px 0 6px}
+.icon{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-size:20px;background:linear-gradient(135deg,rgba(255,255,255,.45),rgba(255,255,255,.08))}
+.up{color:var(--green);font-weight:600}
+table{width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;animation:floatUp .7s .1s cubic-bezier(.22,1,.36,1) both}
+td,th{padding:11px 12px;border-bottom:1px solid rgba(255,255,255,.16);text-align:left;color:var(--txt)}
+tr{transition:background .25s}tr:hover{background:rgba(255,255,255,.08)}
+input,select,textarea{padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.16);color:#fff;width:100%;margin:6px 0;outline:none;transition:all .25s}
+input::placeholder,textarea::placeholder{color:rgba(255,255,255,.55)}
+input:focus,select:focus,textarea:focus{background:rgba(255,255,255,.24);border-color:rgba(255,255,255,.7)}
+option{color:#111}
+button,.btn{background:linear-gradient(135deg,#2fd673,#16a34a);color:#fff;border:0;padding:10px 18px;border-radius:12px;cursor:pointer;text-decoration:none;display:inline-block;font-weight:600;box-shadow:0 8px 24px rgba(22,163,74,.35);transition:all .3s cubic-bezier(.22,1,.36,1)}
+button:hover,.btn:hover{transform:translateY(-2px) scale(1.02)}
+.red{background:linear-gradient(135deg,#f87171,#dc2626);box-shadow:0 8px 24px rgba(220,38,38,.3)}
+a{color:#bae6fd}
+@media(max-width:640px){nav.top{border-radius:20px}.stat h2{font-size:25px}}
+</style>
+<nav class=top><b>✦ {{shop}}</b><a href=/admin>Home</a><a href=/admin/categories>Categories</a><a href=/admin/products>Products</a><a href=/admin/stock>Stock</a><a href=/admin/orders>Orders</a><a href=/admin/users>Users</a><a href=/admin/topups>Top-ups</a><a href=/logout>Logout</a></nav>
+<div class=wrap>{% block body %}{% endblock %}</div>
