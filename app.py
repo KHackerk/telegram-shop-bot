@@ -894,12 +894,26 @@ def logo_img(cid):
     except Exception:
         abort(404)
 
+def _delete_categories(c, ids):
+    ids = [int(i) for i in ids]
+    if not ids: return 0
+    ph = ",".join("?" * len(ids))
+    c.execute(f"DELETE FROM stock_items WHERE product_id IN (SELECT id FROM products WHERE category_id IN ({ph}))", ids)
+    c.execute(f"DELETE FROM saved WHERE product_id IN (SELECT id FROM products WHERE category_id IN ({ph}))", ids)
+    c.execute(f"DELETE FROM products WHERE category_id IN ({ph})", ids)
+    cur = c.execute(f"DELETE FROM categories WHERE id IN ({ph})", ids)
+    return cur.rowcount
+
 @app.route("/admin/categories", methods=["GET","POST"])
 @login_required
 def categories():
     c = db()
     if request.method == "POST":
-        c.execute("INSERT INTO categories(name,emoji,logo_id) VALUES(?,?,?)", (request.form["name"], request.form.get("emoji",""), request.form.get("logo_id",""))); c.commit()
+        if request.form.get("bulk_delete"):
+            n = _delete_categories(c, request.form.getlist("sel")); c.commit()
+            flash(f"Deleted {n} categor{'y' if n == 1 else 'ies'} (with their products and stock).")
+        else:
+            c.execute("INSERT INTO categories(name,emoji,logo_id) VALUES(?,?,?)", (request.form["name"], request.form.get("emoji",""), request.form.get("logo_id",""))); c.commit()
     rows = c.execute("SELECT * FROM categories ORDER BY sort,id").fetchall()
     logos = {r["id"]: cat_logo(r) for r in rows}
     brands = {r["id"]: (r["name"] in BRAND_LOGOS) for r in rows}
@@ -909,7 +923,7 @@ def categories():
 @app.route("/admin/categories/<int:cid>/delete")
 @login_required
 def cat_delete(cid):
-    c = db(); c.execute("DELETE FROM categories WHERE id=?", (cid,)); c.commit(); c.close(); return redirect(url_for("categories"))
+    c = db(); _delete_categories(c, [cid]); c.commit(); c.close(); return redirect(url_for("categories"))
 
 @app.route("/admin/products", methods=["GET","POST"])
 @login_required
