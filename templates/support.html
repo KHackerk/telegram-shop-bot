@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block body %}
+<h1>💬 Support chat</h1><p class=sub>Customer conversations with the bot, newest first. History is recorded from when this feature was deployed.</p>
+{% if rows %}
+<table><tr><th>Customer</th><th>Messages</th><th>Last message</th><th>When (UTC)</th><th></th></tr>
+{% for r in rows %}<tr>
+<td>{{ r.first_name or "" }} {% if r.username %}@{{ r.username }}{% endif %}<br><small>{{ r.user_id }}</small></td>
+<td>{{ r.n }}</td><td>{{ (r.last_text or "")[:90] }}</td><td>{{ r.last_ts }}</td>
+<td><a class="btn" href="/admin/support/{{ r.user_id }}">View chat</a></td></tr>{% endfor %}</table>
+{% else %}
+<div class=card>No chats recorded yet. When a customer sends /start or taps buttons in the bot, their conversation will appear here.</div>
+{% endif %}
+{% endblock %}

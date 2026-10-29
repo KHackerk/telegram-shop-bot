@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% block body %}
+<h1>🤖 Bot UI</h1><p class=sub>Change how the bot looks. Press <b>Save changes</b> — the bot updates immediately, no redeploy needed.</p>
+{% with ms = get_flashed_messages() %}{% if ms %}<div class=card style="border-color:#34d399">{{ ms[0] }}</div>{% endif %}{% endwith %}
+<div class=card><form method=post>
+<label>Shop categories per row
+<select name=cat_cols>
+<option value="1" {% if cat_cols=="1" %}selected{% endif %}>1 per row</option>
+<option value="2" {% if cat_cols=="2" %}selected{% endif %}>2 per row</option>
+</select></label>
+<label>Products per row
+<select name=prod_cols>
+<option value="1" {% if prod_cols=="1" %}selected{% endif %}>1 per row</option>
+<option value="2" {% if prod_cols=="2" %}selected{% endif %}>2 per row</option>
+</select></label>
+<button>Save changes</button>
+</form></div>
+<div class=card><b>Notes</b><br>
+· Category buttons with company logos (ChatGPT Plus, Capcut Pro, Telegram, TikTok, WhatsApp, Spotify) use animated custom-emoji icons from your ApplicationEmoji pack.<br>
+· Other categories use their emoji from the Categories page.<br>
+· Layout changes apply to the next time a customer opens Shop in the bot.</div>
+{% endblock %}

@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% block body %}
+<h1>💬 {{ user.first_name if user else "Customer" }} {% if user and user.username %}@{{ user.username }}{% endif %}</h1>
+<p class=sub>User ID: {{ tid }} · <a href="/admin/support">← All chats</a></p>
+<div class=card>
+{% for m in msgs %}
+<div style="display:flex;{{ 'justify-content:flex-end' if m.direction=='out' else 'justify-content:flex-start' }};margin:8px 0">
+<div style="max-width:78%;padding:10px 14px;border-radius:16px;white-space:pre-wrap;word-break:break-word;{{ 'background:linear-gradient(135deg,#2fd673,#16a34a);color:#fff' if m.direction=='out' else 'background:rgba(255,255,255,.22);color:#fff' }}">
+<small style="opacity:.75">{{ 'Bot' if m.direction=='out' else 'Customer' }} · {{ m.ts }} UTC</small><br>{{ m.text }}</div>
+</div>
+{% endfor %}
+{% if not msgs %}<p>No messages recorded for this customer yet.</p>{% endif %}
+</div>
+{% endblock %}
