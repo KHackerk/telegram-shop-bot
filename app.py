@@ -73,10 +73,15 @@ def init_db():
         c.execute("ALTER TABLE topups ADD COLUMN method_name TEXT DEFAULT ''")
     if "screenshot" not in _tcols:
         c.execute("ALTER TABLE topups ADD COLUMN screenshot BLOB")
+    _ucols = [r["name"] for r in c.execute("PRAGMA table_info(users)").fetchall()]
+    if "lang" not in _ucols:
+        c.execute("ALTER TABLE users ADD COLUMN lang TEXT DEFAULT 'en'")
+    c.execute("UPDATE payment_methods SET details = REPLACE(details, char(10) || '(Edit this in Admin \u2192 Bot UI \u2192 Payment Methods)', '')")
+    c.execute("UPDATE payment_methods SET details = REPLACE(details, '(Edit this in Admin \u2192 Bot UI \u2192 Payment Methods)', '')")
     if c.execute("SELECT COUNT(*) n FROM payment_methods").fetchone()["n"] == 0:
         c.executemany("INSERT INTO payment_methods(name,details,active,sort) VALUES(?,?,1,?)", [
-          ("KBZ Pay", "Phone: 09 XXX XXX XXX\nName: Your Name\n(Edit this in Admin \u2192 Bot UI \u2192 Payment Methods)", 1),
-          ("Wave Money", "Phone: 09 XXX XXX XXX\nName: Your Name\n(Edit this in Admin \u2192 Bot UI \u2192 Payment Methods)", 2),
+          ("KBZ Pay", "Phone: 09 XXX XXX XXX\nName: Your Name", 1),
+          ("Wave Money", "Phone: 09 XXX XXX XXX\nName: Your Name", 2),
         ])
     if c.execute("SELECT COUNT(*) n FROM categories").fetchone()["n"] == 0:
         seed = [
@@ -131,10 +136,10 @@ def logo_thumb_bytes(cid):
     _LOGO_THUMB_CACHE[cid] = raw
     return raw
 
-def money(cents): return f"${cents/100:.2f}"
+def money(cents): return f"{cents//100:,} MMK"
 def tier(total_spent_cents):
-    if total_spent_cents >= 50000: return "Gold"
-    if total_spent_cents >= 10000: return "Silver"
+    if total_spent_cents >= 50000000: return "Gold"
+    if total_spent_cents >= 10000000: return "Silver"
     return "Bronze"
 
 init_db()
@@ -170,6 +175,90 @@ def tset(tid, step, amount=None, method_id=None):
 def tclear(tid):
     c = db(); c.execute("DELETE FROM topup_sessions WHERE telegram_id=?", (tid,)); c.commit(); c.close()
 
+STRINGS = {
+"en": {
+ "menu_shop": "🛍️ Shop", "menu_orders": "📦 My orders", "menu_wallet": "💳 Wallet",
+ "menu_new": "📣 What's new", "menu_support": "💬 Customer Support", "menu_lang": "🌐 Language",
+ "tier": "Tier", "balance": "Balance", "total_spent": "Total spent", "to_silver": "To Silver: {x} more",
+ "orders_line": "Orders: Pending: {p} · Delivered: {d} · Confirmed: {cf}", "invite_link": "Your invite link",
+ "back": "⬅️ Back", "cancel": "❌ Cancel", "home": "🏠 Menu",
+ "wallet_body": "<b>💳 Wallet</b>\n\n{balance_label}: <b>{bal}</b>\n\n<b>How to top up:</b>\n1️⃣ Tap ➕ Deposit below\n2️⃣ Type the amount (MMK)\n3️⃣ Choose a payment method and transfer\n4️⃣ Send your payment screenshot\n\n✅ After the admin checks and approves it, the money lands in your balance.",
+ "deposit_btn": "➕ Deposit",
+ "dep_prompt": "<b>💰 Deposit</b>\n\nType the amount you want to deposit in MMK — e.g. <b>5000</b> or <b>50000</b>.",
+ "dep_choose": "<b>💰 Deposit {amt}</b>\n\nChoose a payment method:",
+ "dep_no_methods": "⚠️ No payment methods are available yet. Please contact support.",
+ "dep_method_gone": "⚠️ That payment method is no longer available.",
+ "dep_transfer": "Amount to transfer: <b>{amt}</b>\n\nTransfer the amount, then tap ✅ I have transferred.",
+ "dep_transferred_btn": "✅ I have transferred", "dep_methods_btn": "⬅️ Payment methods",
+ "dep_send_shot": "📸 Now please <b>send your payment screenshot</b> as a photo in this chat.",
+ "dep_start_again": "⚠️ Please start again from Wallet → Deposit.",
+ "dep_invalid": "⚠️ Please type a valid amount, e.g. 5000",
+ "dep_shot_remind": "📸 Please send the screenshot as a <b>photo</b> (not text).",
+ "dep_use_buttons": "👆 Please tap the buttons above to continue your deposit — or open 💳 Wallet to start over.",
+ "dep_received": "✅ <b>Deposit request received!</b>\n\nAmount: <b>{amt}</b>\nMethod: <b>{method}</b>\n\nThe admin will check your screenshot and credit your balance. You can see it in 💳 Wallet.",
+ "dep_photo_fail": "⚠️ Could not read that photo — please send the screenshot again.",
+ "dep_cancelled": "❌ Deposit cancelled.",
+ "support_body": "<b>💬 Customer Support</b>\n\nNeed help with an order or a deposit? Tap the button below and message our support directly — we usually reply fast.",
+ "support_btn": "💬 Chat with support",
+ "lang_title": "<b>🌐 Language / ဘာသာစကား</b>\n\nChoose your language:",
+ "orders_title": "<b>📦 My orders</b>", "orders_empty": "No orders yet.",
+ "new_title": "<b>📣 Latest stock updates</b>", "new_empty": "No stock yet — check back soon.", "stock_word": "stock",
+ "shop_choose": "Choose a category:",
+ "dep_approved": "✅ <b>Deposit approved!</b>\n\nAmount: <b>{amt}</b>\nNew balance: <b>{bal}</b>\n\nThank you! 🙏",
+ "dep_rejected": "❌ <b>Deposit not approved</b>\n\nAmount: <b>{amt}</b>\n\nPlease check your transfer and screenshot, then try again — or contact Customer Support.",
+},
+"my": {
+ "menu_shop": "🛍️ ဆိုင်", "menu_orders": "📦 ကျွန်ုပ်၏ အော်ဒါများ", "menu_wallet": "💳 ပိုက်ဆံအိတ်",
+ "menu_new": "📣 အသစ်များ", "menu_support": "💬 ဖောက်သည်ဝန်ဆောင်မှု", "menu_lang": "🌐 ဘာသာစကား",
+ "tier": "အဆင့်", "balance": "လက်ကျန်ငွေ", "total_spent": "စုစုပေါင်း သုံးခဲ့ငွေ", "to_silver": "Silver ရဖို့ {x} လိုပါသေးတယ်",
+ "orders_line": "အော်ဒါများ: စောင့်ဆိုင်းဆဲ {p} · ပို့ပြီး {d} · အတည်ပြုပြီး {cf}", "invite_link": "သင့်ဖိတ်ကြားလင့်",
+ "back": "⬅️ နောက်သို့", "cancel": "❌ ပယ်ဖျက်ရန်", "home": "🏠 ပင်မ",
+ "wallet_body": "<b>💳 ပိုက်ဆံအိတ်</b>\n\n{balance_label}: <b>{bal}</b>\n\n<b>ငွေဖြည့်နည်း:</b>\n1️⃣ အောက်က ➕ Deposit ကို နှိပ်ပါ\n2️⃣ ဖြည့်မယ့် ပမာဏ (MMK) ရိုက်ပါ\n3️⃣ Payment method ရွေးပြီး ငွေလွှဲပါ\n4️⃣ Payment screenshot ပို့ပါ\n\n✅ Admin စစ်ဆေး အတည်ပြုပြီးရင် လက်ကျန်ငွေထဲ ရောက်ပါမယ်။",
+ "deposit_btn": "➕ Deposit",
+ "dep_prompt": "<b>💰 ငွေဖြည့်ခြင်း</b>\n\nဖြည့်သွင်းမယ့် ပမာဏကို MMK ဖြင့် ရိုက်ပါ — ဥပမာ <b>5000</b> သို့မဟုတ် <b>50000</b>။",
+ "dep_choose": "<b>💰 Deposit {amt}</b>\n\nPayment method ရွေးပါ:",
+ "dep_no_methods": "⚠️ Payment method မရှိသေးပါ။ Support ကို ဆက်သွယ်ပါ။",
+ "dep_method_gone": "⚠️ အဲဒီ payment method မရှိတော့ပါ။",
+ "dep_transfer": "လွှဲရမယ့် ပမာဏ: <b>{amt}</b>\n\nပမာဏကို လွှဲပြီးရင် ✅ လွှဲပြီးပါပြီ ကို နှိပ်ပါ။",
+ "dep_transferred_btn": "✅ လွှဲပြီးပါပြီ", "dep_methods_btn": "⬅️ Payment methods",
+ "dep_send_shot": "📸 အခု <b>ငွေလွှဲ screenshot</b> ကို ဓာတ်ပုံအဖြစ် ဒီ chat ထဲ ပို့ပေးပါ။",
+ "dep_start_again": "⚠️ Wallet → Deposit ကနေ ပြန်စပါ။",
+ "dep_invalid": "⚠️ မှန်ကန်တဲ့ ပမာဏ ရိုက်ပါ — ဥပမာ 5000",
+ "dep_shot_remind": "📸 Screenshot ကို <b>ဓာတ်ပုံ</b>အဖြစ် ပို့ပါ (စာအဖြစ် မဟုတ်ပါ)။",
+ "dep_use_buttons": "👆 Deposit ဆက်လုပ်ဖို့ အပေါ်က button တွေ နှိပ်ပါ — သို့မဟုတ် 💳 ပိုက်ဆံအိတ် ကနေ ပြန်စပါ။",
+ "dep_received": "✅ <b>Deposit တောင်းဆိုမှု ရရှိပါပြီ!</b>\n\nပမာဏ: <b>{amt}</b>\nနည်းလမ်း: <b>{method}</b>\n\nAdmin က screenshot စစ်ဆေးပြီး လက်ကျန်ငွေ ဖြည့်ပေးပါမယ်။ 💳 ပိုက်ဆံအိတ်မှာ ကြည့်နိုင်ပါတယ်။",
+ "dep_photo_fail": "⚠️ ဓာတ်ပုံ ဖတ်မရပါ — screenshot ပြန်ပို့ပေးပါ။",
+ "dep_cancelled": "❌ Deposit ပယ်ဖျက်ပြီးပါပြီ။",
+ "support_body": "<b>💬 ဖောက်သည်ဝန်ဆောင်မှု</b>\n\nအော်ဒါ သို့မဟုတ် ငွေဖြည့်ခြင်း အတွက် အကူအညီ လိုရင် အောက်က button ကို နှိပ်ပြီး support နဲ့ တိုက်ရိုက် စကားပြောနိုင်ပါတယ် — မြန်မြန် ပြန်ဖြေပေးပါတယ်။",
+ "support_btn": "💬 Support နဲ့ စကားပြောရန်",
+ "lang_title": "<b>🌐 Language / ဘာသာစကား</b>\n\nChoose your language / ဘာသာစကား ရွေးပါ:",
+ "orders_title": "<b>📦 ကျွန်ုပ်၏ အော်ဒါများ</b>", "orders_empty": "အော်ဒါ မရှိသေးပါ။",
+ "new_title": "<b>📣 နောက်ဆုံး Stock အသစ်များ</b>", "new_empty": "Stock အသစ် မရှိသေးပါ — နောက်မှ ပြန်ကြည့်ပါ။", "stock_word": "stock",
+ "shop_choose": "အမျိုးအစား ရွေးပါ:",
+ "dep_approved": "✅ <b>Deposit အတည်ပြုပြီးပါပြီ!</b>\n\nပမာဏ: <b>{amt}</b>\nလက်ကျန် အသစ်: <b>{bal}</b>\n\nကျေးဇူးတင်ပါတယ်! 🙏",
+ "dep_rejected": "❌ <b>Deposit အတည်မပြုပါ</b>\n\nပမာဏ: <b>{amt}</b>\n\nငွေလွှဲမှုနဲ့ screenshot ကို စစ်ပြီး ပြန်ကြိုးစားပါ — သို့မဟုတ် Customer Support ကို ဆက်သွယ်ပါ။",
+}}
+
+def ulang(tid):
+    try:
+        c = db(); r = c.execute("SELECT lang FROM users WHERE telegram_id=?", (tid,)).fetchone(); c.close()
+        return (r["lang"] if r and r["lang"] in ("en", "my") else "en")
+    except Exception:
+        return "en"
+
+def setlang(tid, lang):
+    c = db(); c.execute("UPDATE users SET lang=? WHERE telegram_id=?", (lang, tid)); c.commit(); c.close()
+
+def tr(tid, key):
+    d = STRINGS.get(ulang(tid), STRINGS["en"])
+    return d.get(key, STRINGS["en"].get(key, key))
+
+MENU_ROUTES = {}
+for _lg in STRINGS:
+    for _k, _s in (("menu_shop", "shop"), ("menu_orders", "orders"), ("menu_wallet", "wallet"),
+                   ("menu_new", "new"), ("menu_support", "support"), ("menu_lang", "lang")):
+        MENU_ROUTES[STRINGS[_lg][_k]] = _s
+
 def log_chat(user_id, direction, text):
     try:
         c = db(); c.execute("INSERT INTO chat_messages(user_id,direction,text) VALUES(?,?,?)", (user_id, direction, (text or "")[:1000])); c.commit(); c.close()
@@ -184,7 +273,7 @@ def plain(html_text):
 bot = None
 if BOT_TOKEN:
     import telebot
-    from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+    from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
     bot = telebot.TeleBot(BOT_TOKEN, parse_mode="HTML", threaded=False)
 
     def get_user(msg):
@@ -207,32 +296,25 @@ if BOT_TOKEN:
         counts = {s: c.execute("SELECT COUNT(*) n FROM orders WHERE user_id=? AND status=?", (u["telegram_id"], s)).fetchone()["n"]
                   for s in ("pending","delivered","confirmed")}
         c.close()
+        uid = u["telegram_id"]
         t = tier(u["total_spent_cents"])
-        to_next = max(0, 10000 - u["total_spent_cents"]) if t == "Bronze" else 0
+        to_next = max(0, 10000000 - u["total_spent_cents"]) if t == "Bronze" else 0
         username = f"@{hesc(u['username'])}" if u["username"] else "-"
         try: bot_name = bot.get_me().username
         except: bot_name = "your_bot"
         text = (f"<b>{hesc(u['first_name'] or '') or username}</b>\n\n"
-                f"Tier: <b>{t}</b>\nUser ID: <code>{u['telegram_id']}</code>\nUsername: {username}\n\n"
-                f"Balance: <b>{money(u['balance_cents'])}</b> · Total spent: {money(u['total_spent_cents'])}\n"
-                + (f"To Silver: {money(to_next)} more\n" if t=="Bronze" else "")
-                + f"Orders: Pending: {counts['pending']} · Delivered: {counts['delivered']} · Confirmed: {counts['confirmed']}\n\n"
-                f"Your invite link: https://t.me/{bot_name}?start=ref_{u['telegram_id']}")
-        kb = InlineKeyboardMarkup(row_width=2)
-        kb.add(InlineKeyboardButton("🛍️ Shop", callback_data="shop"))
-        kb.add(InlineKeyboardButton("📦 My orders", callback_data="orders"),
-               InlineKeyboardButton("💳 Wallet", callback_data="wallet"))
-        kb.add(InlineKeyboardButton("📣 What's new", callback_data="new"),
-               InlineKeyboardButton("🤝 Invite & earn", callback_data="invite"))
-        kb.add(InlineKeyboardButton("❤️ Saved", callback_data="saved"),
-               InlineKeyboardButton("🆘 Help", callback_data="help"))
-        kb.add(InlineKeyboardButton("⚙️ Settings", callback_data="settings"))
+                f"{tr(uid, 'tier')}: <b>{t}</b>\nUser ID: <code>{u['telegram_id']}</code>\nUsername: {username}\n\n"
+                f"{tr(uid, 'balance')}: <b>{money(u['balance_cents'])}</b> · {tr(uid, 'total_spent')}: {money(u['total_spent_cents'])}\n"
+                + (tr(uid, 'to_silver').format(x=money(to_next)) + "\n" if t=="Bronze" else "")
+                + tr(uid, 'orders_line').format(p=counts['pending'], d=counts['delivered'], cf=counts['confirmed']) + "\n\n"
+                f"{tr(uid, 'invite_link')}: https://t.me/{bot_name}?start=ref_{u['telegram_id']}")
+        kb = ReplyKeyboardMarkup(resize_keyboard=True, is_persistent=True, row_width=2)
+        kb.add(KeyboardButton(tr(uid, 'menu_shop')), KeyboardButton(tr(uid, 'menu_orders')))
+        kb.add(KeyboardButton(tr(uid, 'menu_wallet')), KeyboardButton(tr(uid, 'menu_new')))
+        kb.add(KeyboardButton(tr(uid, 'menu_support')), KeyboardButton(tr(uid, 'menu_lang')))
         chat_id = msg_or_call.chat.id if hasattr(msg_or_call, "chat") else msg_or_call.message.chat.id
         log_chat(u["telegram_id"], "out", plain(text))
-        if edit and hasattr(msg_or_call, "message"):
-            bot.edit_message_text(text, chat_id, msg_or_call.message.message_id, reply_markup=kb)
-        else:
-            bot.send_message(chat_id, text, reply_markup=kb)
+        bot.send_message(chat_id, text, reply_markup=kb)
 
     @bot.message_handler(commands=["start"])
     def start(msg):
@@ -253,9 +335,27 @@ if BOT_TOKEN:
         def show(text, kb=None):
             log_chat(call.from_user.id, "out", plain(text))
             bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=kb, parse_mode="HTML")
-        back = InlineKeyboardMarkup(); back.add(InlineKeyboardButton("⬅️ Back", callback_data="home"))
+        uid = call.from_user.id
+        back = InlineKeyboardMarkup(); back.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
         if data == "home":
-            c.close(); main_menu(call, edit=True); return
+            c.close(); main_menu(call); return
+        if data in ("invite", "saved"):
+            c.close(); main_menu(call); return
+        if data in ("support", "help"):
+            kb = InlineKeyboardMarkup()
+            kb.add(InlineKeyboardButton(tr(uid, 'support_btn'), url="https://t.me/Khant_2001"))
+            kb.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
+            show(tr(uid, 'support_body'), kb); c.close(); return
+        if data == "settings" or data == "lang":
+            kb = InlineKeyboardMarkup(row_width=1)
+            kb.add(InlineKeyboardButton("🇲🇲 မြန်မာ (Myanmar)", callback_data="lang_my"))
+            kb.add(InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"))
+            kb.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
+            show(tr(uid, 'lang_title'), kb); c.close(); return
+        if data in ("lang_my", "lang_en"):
+            setlang(uid, "my" if data == "lang_my" else "en")
+            bot.answer_callback_query(call.id, "ဘာသာစကား ပြောင်းပြီးပါပြီ ✓" if data == "lang_my" else "Language changed ✓")
+            c.close(); main_menu(call); return
         if data == "shop":
             cats = c.execute("SELECT cat.*, (SELECT COUNT(*) FROM stock_items s JOIN products p ON p.id=s.product_id WHERE p.category_id=cat.id AND s.is_sold=0) stock FROM categories cat ORDER BY sort").fetchall()
             try: cat_cols = max(1, min(2, int(get_setting("cat_cols", "2"))))
@@ -278,7 +378,7 @@ if BOT_TOKEN:
             kb.add(InlineKeyboardButton("⬅️ Back", callback_data="home"))
             import json as _json
             _title = get_setting("shop_title", "") or f"🛍️ {SHOP_NAME}"
-            _sub = get_setting("shop_subtitle", "") or "Choose a category:"
+            _sub = get_setting("shop_subtitle", "") or tr(uid, 'shop_choose')
             _head = f"<b>{hesc(_title)}</b>\n{hesc(_sub)}"
             try:
                 show(_head, _json.dumps({"inline_keyboard": raw_rows}))
@@ -321,49 +421,49 @@ if BOT_TOKEN:
                 show(f"✅ <b>Order #{cur.lastrowid} created (Pending)</b>\nAdmin will deliver it soon. Check My orders.", back)
         elif data == "orders":
             rows = c.execute("SELECT o.*, p.name FROM orders o LEFT JOIN products p ON p.id=o.product_id WHERE o.user_id=? ORDER BY o.id DESC LIMIT 20", (call.from_user.id,)).fetchall()
-            txt = "<b>📦 My orders</b>\n\n" + ("\n".join(f"#{r['id']} · {r['name']} · {money(r['price_cents'])} · <b>{r['status']}</b>" + (f"\n{r['delivery']}" if r["delivery"] else "") for r in rows) or "No orders yet.")
+            txt = tr(uid, 'orders_title') + "\n\n" + ("\n".join(f"#{r['id']} · {r['name']} · {money(r['price_cents'])} · <b>{r['status']}</b>" + (f"\n{r['delivery']}" if r["delivery"] else "") for r in rows) or tr(uid, 'orders_empty'))
             show(txt, back)
         elif data == "wallet":
             u = c.execute("SELECT * FROM users WHERE telegram_id=?", (call.from_user.id,)).fetchone()
-            kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton("➕ Deposit", callback_data="dep_start"))
-            kb.add(InlineKeyboardButton("⬅️ Back", callback_data="home"))
-            show(f"<b>💳 Wallet</b>\nBalance: <b>{money(u['balance_cents']) if u else '$0.00'}</b>\n\nTap ➕ Deposit, enter an amount, choose a payment method, transfer, then send your payment screenshot. The admin approves deposits in the dashboard.", kb)
+            kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton(tr(uid, 'deposit_btn'), callback_data="dep_start"))
+            kb.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
+            show(tr(uid, 'wallet_body').format(balance_label=tr(uid, 'balance'), bal=money(u['balance_cents']) if u else money(0)), kb)
         elif data == "dep_start" or data.startswith("topup_"):
             tset(call.from_user.id, "amount", amount=0, method_id=0)
-            kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton("❌ Cancel", callback_data="dep_cancel"))
-            show("<b>💰 Deposit</b>\n\nType the amount you want to deposit in USD — e.g. <b>25</b> or <b>25.50</b>.", kb)
+            kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton(tr(uid, 'cancel'), callback_data="dep_cancel"))
+            show(tr(uid, 'dep_prompt'), kb)
         elif data == "dep_cancel":
             tclear(call.from_user.id)
-            show("❌ Deposit cancelled.", back)
+            show(tr(uid, 'dep_cancelled'), back)
         elif data == "dep_methods":
             s = tget(call.from_user.id); amt = s["amount_cents"] if s else 0
             ms = c.execute("SELECT * FROM payment_methods WHERE active=1 ORDER BY sort,id").fetchall()
             if not ms:
-                show("⚠️ No payment methods are available yet. Please contact the admin.", back)
+                show(tr(uid, 'dep_no_methods'), back)
             else:
                 kb = InlineKeyboardMarkup()
                 for mth in ms: kb.add(InlineKeyboardButton(f"💳 {mth['name']}", callback_data=f"dep_method_{mth['id']}"))
-                kb.add(InlineKeyboardButton("❌ Cancel", callback_data="dep_cancel"))
-                show(f"<b>💰 Deposit {money(amt)}</b>\n\nChoose a payment method:", kb)
+                kb.add(InlineKeyboardButton(tr(uid, 'cancel'), callback_data="dep_cancel"))
+                show(tr(uid, 'dep_choose').format(amt=money(amt)), kb)
         elif data.startswith("dep_method_"):
             mid = int(data[11:]); m = c.execute("SELECT * FROM payment_methods WHERE id=? AND active=1", (mid,)).fetchone()
-            if not m: show("⚠️ That payment method is no longer available.", back)
+            if not m: show(tr(uid, 'dep_method_gone'), back)
             else:
                 tset(call.from_user.id, "confirm", method_id=mid)
                 s = tget(call.from_user.id); amt = s["amount_cents"] if s else 0
                 kb = InlineKeyboardMarkup()
-                kb.add(InlineKeyboardButton("✅ I have transferred", callback_data="dep_done"))
-                kb.add(InlineKeyboardButton("⬅️ Payment methods", callback_data="dep_methods"))
-                kb.add(InlineKeyboardButton("❌ Cancel", callback_data="dep_cancel"))
-                show(f"<b>💳 {hesc(m['name'])}</b>\n\n{hesc(m['details'])}\n\nAmount to transfer: <b>{money(amt)}</b>\n\nTransfer the amount, then tap ✅ I have transferred.", kb)
+                kb.add(InlineKeyboardButton(tr(uid, 'dep_transferred_btn'), callback_data="dep_done"))
+                kb.add(InlineKeyboardButton(tr(uid, 'dep_methods_btn'), callback_data="dep_methods"))
+                kb.add(InlineKeyboardButton(tr(uid, 'cancel'), callback_data="dep_cancel"))
+                show(f"<b>💳 {hesc(m['name'])}</b>\n\n{hesc(m['details'])}\n\n" + tr(uid, 'dep_transfer').format(amt=money(amt)), kb)
         elif data == "dep_done":
             s = tget(call.from_user.id)
             if s and s["step"] == "confirm":
                 tset(call.from_user.id, "screenshot")
-                kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton("❌ Cancel", callback_data="dep_cancel"))
-                show("📸 Now please <b>send your payment screenshot</b> as a photo in this chat.", kb)
+                kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton(tr(uid, 'cancel'), callback_data="dep_cancel"))
+                show(tr(uid, 'dep_send_shot'), kb)
             else:
-                show("⚠️ Please start again from Wallet → Deposit.", back)
+                show(tr(uid, 'dep_start_again'), back)
         elif data == "invite":
             try: bot_name = bot.get_me().username
             except: bot_name = "your_bot"
@@ -373,12 +473,79 @@ if BOT_TOKEN:
             rows = c.execute("SELECT p.* FROM saved s JOIN products p ON p.id=s.product_id WHERE s.user_id=?", (call.from_user.id,)).fetchall()
             show("<b>❤️ Saved</b>\n\n" + ("\n".join(f"• {r['name']} — {money(r['price_cents'])}" for r in rows) or "Nothing saved yet."), back)
         elif data == "new":
-            rows = c.execute("SELECT * FROM products WHERE active=1 ORDER BY id DESC LIMIT 10").fetchall()
-            show("<b>📣 What's new</b>\n\n" + "\n".join(f"• {r['name']} — {money(r['price_cents'])}" for r in rows), back)
+            rows = c.execute("""SELECT p.*, (SELECT COUNT(*) FROM stock_items s2 WHERE s2.product_id=p.id AND s2.is_sold=0) stock,
+                (SELECT MAX(s3.id) FROM stock_items s3 WHERE s3.product_id=p.id) last_stock
+                FROM products p WHERE p.active=1 AND EXISTS(SELECT 1 FROM stock_items s WHERE s.product_id=p.id)
+                ORDER BY last_stock DESC LIMIT 10""").fetchall()
+            lines = "\n".join(f"• <b>{hesc(r['name'])}</b> — {money(r['price_cents'])} · {tr(uid, 'stock_word')}: {r['stock']}" for r in rows)
+            show(tr(uid, 'new_title') + "\n\n" + (lines or tr(uid, 'new_empty')), back)
         elif data == "help":
             show("<b>🆘 Help</b>\n1. Add funds in Wallet\n2. Open Shop and buy\n3. Auto items deliver instantly; others are delivered by admin.\nContact the shop admin if an order is delayed.", back)
         elif data == "settings":
             show("<b>⚙️ Settings</b>\nLanguage and notifications are coming in the admin dashboard update.", back)
+        c.close()
+
+    def send_screen(uid, chat_id, screen):
+        c = db()
+        back = InlineKeyboardMarkup(); back.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
+        if screen == "shop":
+            cats = c.execute("SELECT * FROM categories ORDER BY sort").fetchall()
+            try: cat_cols = max(1, min(2, int(get_setting("cat_cols", "2"))))
+            except Exception: cat_cols = 2
+            raw_rows, kb = [], InlineKeyboardMarkup(row_width=cat_cols)
+            for cat in cats:
+                cnt = c.execute("SELECT COUNT(*) n FROM products WHERE category_id=? AND active=1", (cat["id"],)).fetchone()["n"]
+                logo = cat_logo(cat)
+                _lbl = f"{cat['name']} ({cnt})" if get_setting("show_counts", "1") == "1" else cat["name"]
+                if logo:
+                    btn = {"text": _lbl, "callback_data": f"cat_{cat['id']}", "icon_custom_emoji_id": logo}
+                    fb_text = f"{cat['emoji']} {_lbl}"
+                else:
+                    btn = {"text": f"{cat['emoji']} {_lbl}", "callback_data": f"cat_{cat['id']}"}
+                    fb_text = btn["text"]
+                if not raw_rows or len(raw_rows[-1]) >= cat_cols: raw_rows.append([])
+                raw_rows[-1].append(btn)
+                kb.add(InlineKeyboardButton(fb_text, callback_data=f"cat_{cat['id']}"))
+            raw_rows.append([{"text": tr(uid, 'back'), "callback_data": "home"}])
+            kb.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
+            import json as _json
+            _title = get_setting("shop_title", "") or f"🛍️ {SHOP_NAME}"
+            _sub = get_setting("shop_subtitle", "") or tr(uid, 'shop_choose')
+            _head = f"<b>{hesc(_title)}</b>\n{hesc(_sub)}"
+            log_chat(uid, "out", plain(_head))
+            try: bot.send_message(chat_id, _head, reply_markup=_json.dumps({"inline_keyboard": raw_rows}))
+            except Exception: bot.send_message(chat_id, _head, reply_markup=kb)
+        elif screen == "wallet":
+            u = c.execute("SELECT * FROM users WHERE telegram_id=?", (uid,)).fetchone()
+            kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton(tr(uid, 'deposit_btn'), callback_data="dep_start"))
+            kb.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
+            txt = tr(uid, 'wallet_body').format(balance_label=tr(uid, 'balance'), bal=money(u['balance_cents']) if u else money(0))
+            log_chat(uid, "out", plain(txt)); bot.send_message(chat_id, txt, reply_markup=kb)
+        elif screen == "orders":
+            rows = c.execute("SELECT o.*, p.name FROM orders o LEFT JOIN products p ON p.id=o.product_id WHERE o.user_id=? ORDER BY o.id DESC LIMIT 20", (uid,)).fetchall()
+            txt = tr(uid, 'orders_title') + "\n\n" + ("\n".join(f"#{r['id']} · {r['name']} · {money(r['price_cents'])} · <b>{r['status']}</b>" + (f"\n{r['delivery']}" if r["delivery"] else "") for r in rows) or tr(uid, 'orders_empty'))
+            log_chat(uid, "out", plain(txt)); bot.send_message(chat_id, txt, reply_markup=back)
+        elif screen == "new":
+            rows = c.execute("""SELECT p.*, (SELECT COUNT(*) FROM stock_items s2 WHERE s2.product_id=p.id AND s2.is_sold=0) stock,
+                (SELECT MAX(s3.id) FROM stock_items s3 WHERE s3.product_id=p.id) last_stock
+                FROM products p WHERE p.active=1 AND EXISTS(SELECT 1 FROM stock_items s WHERE s.product_id=p.id)
+                ORDER BY last_stock DESC LIMIT 10""").fetchall()
+            lines = "\n".join(f"• <b>{hesc(r['name'])}</b> — {money(r['price_cents'])} · {tr(uid, 'stock_word')}: {r['stock']}" for r in rows)
+            txt = tr(uid, 'new_title') + "\n\n" + (lines or tr(uid, 'new_empty'))
+            log_chat(uid, "out", plain(txt)); bot.send_message(chat_id, txt, reply_markup=back)
+        elif screen == "support":
+            kb = InlineKeyboardMarkup()
+            kb.add(InlineKeyboardButton(tr(uid, 'support_btn'), url="https://t.me/Khant_2001"))
+            kb.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
+            txt = tr(uid, 'support_body')
+            log_chat(uid, "out", plain(txt)); bot.send_message(chat_id, txt, reply_markup=kb)
+        elif screen == "lang":
+            kb = InlineKeyboardMarkup(row_width=1)
+            kb.add(InlineKeyboardButton("🇲🇲 မြန်မာ (Myanmar)", callback_data="lang_my"))
+            kb.add(InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"))
+            kb.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
+            txt = tr(uid, 'lang_title')
+            log_chat(uid, "out", plain(txt)); bot.send_message(chat_id, txt, reply_markup=kb)
         c.close()
 
     @bot.message_handler(content_types=["photo"])
@@ -388,7 +555,7 @@ if BOT_TOKEN:
         try:
             data = bot.download_file(bot.get_file(msg.photo[-1].file_id).file_path)
         except Exception:
-            bot.send_message(msg.chat.id, "⚠️ Could not read that photo — please send the screenshot again.")
+            bot.send_message(msg.chat.id, tr(msg.from_user.id, 'dep_photo_fail'))
             return
         c = db(); m = c.execute("SELECT * FROM payment_methods WHERE id=?", (s["method_id"],)).fetchone()
         mname = m["name"] if m else ""
@@ -396,15 +563,18 @@ if BOT_TOKEN:
                   (msg.from_user.id, s["amount_cents"], mname, mname, data)); c.commit(); c.close()
         tclear(msg.from_user.id)
         log_chat(msg.from_user.id, "in", "📷 Payment screenshot")
-        txt = ("✅ <b>Deposit request received!</b>\n\n"
-               f"Amount: <b>{money(s['amount_cents'])}</b>\nMethod: <b>{hesc(mname)}</b>\n\n"
-               "The admin will check your screenshot and credit your balance. You can see it in 💳 Wallet.")
+        txt = tr(msg.from_user.id, 'dep_received').format(amt=money(s['amount_cents']), method=hesc(mname))
         log_chat(msg.from_user.id, "out", plain(txt))
-        kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton("🏠 Menu", callback_data="home"))
+        kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton(tr(msg.from_user.id, 'home'), callback_data="home"))
         bot.send_message(msg.chat.id, txt, reply_markup=kb)
 
     @bot.message_handler(func=lambda m: bool(m.text) and not m.text.startswith("/"), content_types=["text"])
     def dep_text(msg):
+        route = MENU_ROUTES.get((msg.text or "").strip())
+        if route:
+            tclear(msg.from_user.id)
+            send_screen(msg.from_user.id, msg.chat.id, route)
+            return
         s = tget(msg.from_user.id)
         if not s: return
         if s["step"] == "amount":
@@ -412,20 +582,20 @@ if BOT_TOKEN:
             try: cents = int(round(float(raw) * 100))
             except Exception: cents = 0
             if cents <= 0:
-                bot.send_message(msg.chat.id, "⚠️ Please type a valid amount, e.g. 25")
+                bot.send_message(msg.chat.id, tr(msg.from_user.id, 'dep_invalid'))
                 return
             tset(msg.from_user.id, "method", amount=cents)
             c = db(); ms = c.execute("SELECT * FROM payment_methods WHERE active=1 ORDER BY sort,id").fetchall(); c.close()
             kb = InlineKeyboardMarkup()
             for mth in ms: kb.add(InlineKeyboardButton(f"💳 {mth['name']}", callback_data=f"dep_method_{mth['id']}"))
-            kb.add(InlineKeyboardButton("❌ Cancel", callback_data="dep_cancel"))
-            txt = f"<b>💰 Deposit {money(cents)}</b>\n\nChoose a payment method:"
+            kb.add(InlineKeyboardButton(tr(msg.from_user.id, 'cancel'), callback_data="dep_cancel"))
+            txt = tr(msg.from_user.id, 'dep_choose').format(amt=money(cents))
             log_chat(msg.from_user.id, "out", plain(txt))
             bot.send_message(msg.chat.id, txt, reply_markup=kb)
         elif s["step"] == "screenshot":
-            bot.send_message(msg.chat.id, "📸 Please send the screenshot as a <b>photo</b> (not text).")
+            bot.send_message(msg.chat.id, tr(msg.from_user.id, 'dep_shot_remind'))
         elif s["step"] in ("method", "confirm"):
-            bot.send_message(msg.chat.id, "👆 Please tap the buttons above to continue your deposit — or open 💳 Wallet to cancel.")
+            bot.send_message(msg.chat.id, tr(msg.from_user.id, 'dep_use_buttons'))
 
     @app.route(f"/webhook", methods=["POST"])
     def webhook():
@@ -829,6 +999,17 @@ def topup_act(tid, act):
             c.execute("UPDATE topups SET status='approved' WHERE id=?", (tid,))
         elif act == "reject": c.execute("UPDATE topups SET status='rejected' WHERE id=?", (tid,))
         c.commit()
+        if act in ("approve", "reject") and bot:
+            try:
+                if act == "approve":
+                    u = c.execute("SELECT balance_cents FROM users WHERE telegram_id=?", (t["user_id"],)).fetchone()
+                    msg = tr(t["user_id"], 'dep_approved').format(amt=money(t["amount_cents"]), bal=money(u["balance_cents"]) if u else money(0))
+                else:
+                    msg = tr(t["user_id"], 'dep_rejected').format(amt=money(t["amount_cents"]))
+                bot.send_message(t["user_id"], msg)
+                log_chat(t["user_id"], "out", plain(msg))
+            except Exception:
+                pass
     c.close(); return redirect(url_for("topups"))
 
 @app.route("/health")
