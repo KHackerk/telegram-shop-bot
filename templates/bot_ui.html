@@ -15,6 +15,23 @@
 <label style="display:flex;gap:8px;align-items:center"><input type=checkbox name=show_counts value="1" {% if show_counts=="1" %}checked{% endif %} style="width:auto"> Show product counts on category buttons</label>
 <button>Save design</button></form></div>
 
+<div class=card><h3 style="margin-top:0">💳 Payment Methods (Wallet deposits)</h3>
+<p style="color:var(--dim)">When a customer deposits in the bot they: enter an amount → pick one of these methods → see its payment details → tap "I have transferred" → send a screenshot. The request then appears under <b>Top-ups</b> for your approval.</p>
+{% for pm in pmethods %}
+<form method=post style="border-top:1px solid rgba(255,255,255,.18);padding-top:12px;margin-top:12px">
+<input type=hidden name=section value=pay_one><input type=hidden name=pm_id value="{{ pm.id }}">
+<label>Method name<input name=pm_name value="{{ pm.name }}"></label>
+<label>Payment details (account number / name / instructions — shown to the customer)<textarea name=pm_details rows=3>{{ pm.details }}</textarea></label>
+<label style="display:flex;gap:8px;align-items:center"><input type=checkbox name=pm_active value=1 {% if pm.active %}checked{% endif %} style="width:auto"> Active (shown in the bot)</label>
+<button name=act value=save>Save method</button>
+<button name=act value=delete class=red onclick="return confirm('Delete this payment method?')">Delete</button>
+</form>
+{% endfor %}
+<form method=post style="border-top:1px solid rgba(255,255,255,.18);padding-top:12px;margin-top:12px">
+<input type=hidden name=section value=pay_add>
+<label>New method name<input name=pm_name placeholder="e.g. KBZ Pay / Wave Money / USDT (TRC20)"></label>
+<label>Payment details<textarea name=pm_details rows=3 placeholder="Account number, account name, any instructions"></textarea></label>
+<button>Add payment method</button></form></div>
 <div class=card><h3 style="margin-top:0">🏷️ Categories — name, emoji &amp; company logo</h3>
 <form method=post><input type=hidden name=section value=cats>
 <table><tr><th></th><th>Name</th><th>Emoji</th><th>Logo (animated, in bot)</th></tr>

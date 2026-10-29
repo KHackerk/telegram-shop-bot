@@ -1,1 +1,10 @@
-{% extends "base.html" %}{% block body %}<h1>Top-up requests</h1><table><tr><th>ID</th><th>User</th><th>Amount</th><th>Status</th><th></th></tr>{% for r in rows %}<tr><td>{{r.id}}</td><td>{{r.user_id}}</td><td>{{money(r.amount_cents)}}</td><td>{{r.status}}</td><td>{% if r.status=='pending' %}<a class=btn href="/admin/topups/{{r.id}}/approve">Approve</a> <a class="btn red" href="/admin/topups/{{r.id}}/reject">Reject</a>{% endif %}</td></tr>{% endfor %}</table>{% endblock %}
+{% extends "base.html" %}{% block body %}
+<h1>💰 Top-up requests</h1>
+<p class=sub>Deposit requests appear here only after the customer has chosen a payment method, transferred, and sent their payment screenshot in the bot. Approve credits the customer's balance.</p>
+<table><tr><th>ID</th><th>User</th><th>Amount</th><th>Method</th><th>Screenshot</th><th>Status</th><th>When</th><th></th></tr>
+{% for r in rows %}<tr><td>{{r.id}}</td><td>{{r.user_id}}</td><td>{{money(r.amount_cents)}}</td><td>{{r.method_name or r.method}}</td>
+<td>{% if r.screenshot %}<a href="/admin/topups/{{r.id}}/img" target="_blank"><img src="/admin/topups/{{r.id}}/img" alt="screenshot" style="height:56px;border-radius:8px"></a>{% else %}—{% endif %}</td>
+<td>{{r.status}}</td><td>{{r.created_at}}</td>
+<td>{% if r.status=='pending' %}<a class=btn href="/admin/topups/{{r.id}}/approve">Approve</a> <a class="btn red" href="/admin/topups/{{r.id}}/reject">Reject</a>{% endif %}</td></tr>{% endfor %}
+</table>{% if not rows %}<div class=card>No top-up requests yet.</div>{% endif %}
+{% endblock %}
