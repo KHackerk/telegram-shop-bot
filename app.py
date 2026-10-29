@@ -50,6 +50,11 @@ def init_db():
       method TEXT DEFAULT '', status TEXT DEFAULT 'pending', created_at TEXT DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE IF NOT EXISTS events(
       id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT, detail TEXT, ts TEXT DEFAULT CURRENT_TIMESTAMP);
+    CREATE TABLE IF NOT EXISTS settings(
+      key TEXT PRIMARY KEY, value TEXT);
+    CREATE TABLE IF NOT EXISTS chat_messages(
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, direction TEXT, text TEXT,
+      ts TEXT DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE IF NOT EXISTS saved(
       user_id INTEGER, product_id INTEGER, PRIMARY KEY(user_id, product_id));
     """)
@@ -101,6 +106,26 @@ def log_event(kind, detail=""):
     except Exception:
         pass
 
+def get_setting(key, default=""):
+    try:
+        c = db(); r = c.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone(); c.close()
+        return r["value"] if r else default
+    except Exception:
+        return default
+
+def set_setting(key, value):
+    c = db(); c.execute("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (key, str(value))); c.commit(); c.close()
+
+def log_chat(user_id, direction, text):
+    try:
+        c = db(); c.execute("INSERT INTO chat_messages(user_id,direction,text) VALUES(?,?,?)", (user_id, direction, (text or "")[:1000])); c.commit(); c.close()
+    except Exception:
+        pass
+
+def plain(html_text):
+    import re as _re
+    return _re.sub("<[^>]+>", "", html_text or "").strip()
+
 # ---------- Telegram Bot (optional until BOT_TOKEN is set) ----------
 bot = None
 if BOT_TOKEN:
@@ -149,6 +174,7 @@ if BOT_TOKEN:
                InlineKeyboardButton("🆘 Help", callback_data="help"))
         kb.add(InlineKeyboardButton("⚙️ Settings", callback_data="settings"))
         chat_id = msg_or_call.chat.id if hasattr(msg_or_call, "chat") else msg_or_call.message.chat.id
+        log_chat(u["telegram_id"], "out", plain(text))
         if edit and hasattr(msg_or_call, "message"):
             bot.edit_message_text(text, chat_id, msg_or_call.message.message_id, reply_markup=kb)
         else:
@@ -169,32 +195,42 @@ if BOT_TOKEN:
     @bot.callback_query_handler(func=lambda c: True)
     def cb(call):
         c = db(); data = call.data
+        log_chat(call.from_user.id, "in", f"[tap] {data}")
         def show(text, kb=None):
+            log_chat(call.from_user.id, "out", plain(text))
             bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=kb, parse_mode="HTML")
         back = InlineKeyboardMarkup(); back.add(InlineKeyboardButton("⬅️ Back", callback_data="home"))
         if data == "home":
             c.close(); main_menu(call, edit=True); return
         if data == "shop":
             cats = c.execute("SELECT cat.*, (SELECT COUNT(*) FROM stock_items s JOIN products p ON p.id=s.product_id WHERE p.category_id=cat.id AND s.is_sold=0) stock FROM categories cat ORDER BY sort").fetchall()
-            rows, kb = [], InlineKeyboardMarkup(row_width=2)
+            try: cat_cols = max(1, min(2, int(get_setting("cat_cols", "2"))))
+            except Exception: cat_cols = 2
+            raw_rows, kb = [], InlineKeyboardMarkup(row_width=cat_cols)
             for cat in cats:
                 cnt = c.execute("SELECT COUNT(*) n FROM products WHERE category_id=? AND active=1", (cat["id"],)).fetchone()["n"]
                 logo = LOGO_EMOJI.get(cat["name"])
                 if logo:
-                    rows.append([{"text": f"{cat['name']} ({cnt})", "callback_data": f"cat_{cat['id']}", "icon_custom_emoji_id": logo}])
+                    btn = {"text": f"{cat['name']} ({cnt})", "callback_data": f"cat_{cat['id']}", "icon_custom_emoji_id": logo}
+                    fb_text = f"{cat['emoji']} {cat['name']} ({cnt})"
                 else:
-                    rows.append([{"text": f"{cat['emoji']} {cat['name']} ({cnt})", "callback_data": f"cat_{cat['id']}"}])
-                kb.add(InlineKeyboardButton(rows[-1][0]["text"] if not logo else f"{cat['emoji']} {cat['name']} ({cnt})", callback_data=f"cat_{cat['id']}"))
-            rows.append([{"text": "⬅️ Back", "callback_data": "home"}])
+                    btn = {"text": f"{cat['emoji']} {cat['name']} ({cnt})", "callback_data": f"cat_{cat['id']}"}
+                    fb_text = btn["text"]
+                if not raw_rows or len(raw_rows[-1]) >= cat_cols: raw_rows.append([])
+                raw_rows[-1].append(btn)
+                kb.add(InlineKeyboardButton(fb_text, callback_data=f"cat_{cat['id']}"))
+            raw_rows.append([{"text": "⬅️ Back", "callback_data": "home"}])
             kb.add(InlineKeyboardButton("⬅️ Back", callback_data="home"))
             import json as _json
             try:
-                show(f"<b>🛍️ {SHOP_NAME}</b>\nChoose a category:", _json.dumps({"inline_keyboard": rows}))
+                show(f"<b>🛍️ {SHOP_NAME}</b>\nChoose a category:", _json.dumps({"inline_keyboard": raw_rows}))
             except Exception:
                 show(f"<b>🛍️ {SHOP_NAME}</b>\nChoose a category:", kb)
         elif data.startswith("cat_"):
             cid = int(data[4:]); prods = c.execute("SELECT * FROM products WHERE category_id=? AND active=1", (cid,)).fetchall()
-            kb = InlineKeyboardMarkup(row_width=1)
+            try: prod_cols = max(1, min(2, int(get_setting("prod_cols", "1"))))
+            except Exception: prod_cols = 1
+            kb = InlineKeyboardMarkup(row_width=prod_cols)
             for p in prods:
                 stock = c.execute("SELECT COUNT(*) n FROM stock_items WHERE product_id=? AND is_sold=0", (p["id"],)).fetchone()["n"]
                 kb.add(InlineKeyboardButton(f"{p['name']} — {money(p['price_cents'])} · stock {stock}", callback_data=f"prod_{p['id']}"))
@@ -257,6 +293,14 @@ if BOT_TOKEN:
     @app.route(f"/webhook", methods=["POST"])
     def webhook():
         update = telebot.types.Update.de_json(request.get_data().decode("utf-8"))
+        try:
+            m0 = update.message or update.edited_message
+            if m0 is not None and getattr(m0, "text", None):
+                log_chat(m0.from_user.id, "in", m0.text)
+                if not (update.message and (m0.text or "").startswith("/start")):
+                    pass
+        except Exception:
+            pass
         bot.process_new_updates([update]); return "ok"
 
 # ---------- Admin web ----------
@@ -460,6 +504,37 @@ def balance(tid):
 def topups():
     c = db(); rows = c.execute("SELECT * FROM topups ORDER BY id DESC").fetchall(); c.close()
     return render_template("topups.html", rows=rows, money=money, shop=SHOP_NAME)
+
+@app.route("/admin/bot-ui", methods=["GET","POST"])
+@login_required
+def bot_ui():
+    if request.method == "POST":
+        for key in ("cat_cols", "prod_cols"):
+            v = request.form.get(key, "")
+            if v in ("1", "2"): set_setting(key, v)
+        flash("Bot UI settings saved — they apply to the bot immediately.")
+        return redirect(url_for("bot_ui"))
+    return render_template("bot_ui.html", cat_cols=get_setting("cat_cols", "2"), prod_cols=get_setting("prod_cols", "1"), shop=SHOP_NAME)
+
+@app.route("/admin/support")
+@login_required
+def support():
+    c = db()
+    rows = c.execute("""SELECT m.user_id, u.username, u.first_name, COUNT(*) n, MAX(m.ts) last_ts,
+                        (SELECT text FROM chat_messages WHERE user_id=m.user_id ORDER BY id DESC LIMIT 1) last_text
+                        FROM chat_messages m LEFT JOIN users u ON u.telegram_id=m.user_id
+                        GROUP BY m.user_id ORDER BY last_ts DESC""").fetchall()
+    c.close()
+    return render_template("support.html", rows=rows, shop=SHOP_NAME)
+
+@app.route("/admin/support/<int:tid>")
+@login_required
+def support_thread(tid):
+    c = db()
+    user = c.execute("SELECT * FROM users WHERE telegram_id=?", (tid,)).fetchone()
+    msgs = c.execute("SELECT * FROM chat_messages WHERE user_id=? ORDER BY id DESC LIMIT 200", (tid,)).fetchall()[::-1]
+    c.close()
+    return render_template("support_thread.html", user=user, tid=tid, msgs=msgs, shop=SHOP_NAME)
 
 @app.route("/admin/topups/<int:tid>/<act>")
 @login_required
