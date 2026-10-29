@@ -3,6 +3,7 @@
 <p class=sub>User ID: {{ tid }} · <a href="/admin/support">← All chats</a></p>
 {% with ms = get_flashed_messages() %}{% if ms %}<div class=card style="border-color:#34d399">{{ ms[0] }}</div>{% endif %}{% endwith %}
 <div class=card>
+<div id=chatbox style="max-height:60vh;overflow-y:auto;padding:2px 6px 2px 2px;scrollbar-width:thin">
 {% for m in msgs %}
 <div style="display:flex;{{ 'justify-content:flex-end' if m.direction=='out' else 'justify-content:flex-start' }};margin:8px 0">
 <div style="max-width:78%;padding:10px 14px;border-radius:16px;white-space:pre-wrap;word-break:break-word;{{ 'background:linear-gradient(135deg,#2fd673,#16a34a);color:#fff' if m.direction=='out' else 'background:rgba(255,255,255,.22);color:#fff' }}">
@@ -10,6 +11,8 @@
 </div>
 {% endfor %}
 {% if not msgs %}<p>No messages recorded for this customer yet.</p>{% endif %}
+</div>
+<script>var cb=document.getElementById('chatbox');if(cb){cb.scrollTop=cb.scrollHeight;}</script>
 </div>
 <div class=card><h3 style="margin-top:0">✍️ Reply to this customer</h3>
 <form method=post action="/admin/support/{{ tid }}/reply" enctype="multipart/form-data">
