@@ -593,22 +593,28 @@ def balance(tid):
 @login_required
 def support_reply(tid):
     text = (request.form.get("text") or "").strip()
-    photo = request.files.get("photo")
+    photo = request.files.get("attach") or request.files.get("photo")
     if not bot:
         flash("Bot is off (no BOT_TOKEN) — cannot send.")
         return redirect(url_for("support_thread", tid=tid))
     try:
         if photo and photo.filename:
             import io as _io
-            buf = _io.BytesIO(photo.read()); buf.name = photo.filename or "photo.jpg"
             cap = text if text else None
-            bot.send_photo(tid, buf, caption=cap, parse_mode=None)
-            log_chat(tid, "out", ("📷 Photo" + (f": {text}" if text else "")))
+            fname = photo.filename
+            is_img = (photo.mimetype or "").startswith("image/") or fname.lower().endswith((".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp"))
+            if is_img:
+                buf = _io.BytesIO(photo.read()); buf.name = fname or "photo.jpg"
+                bot.send_photo(tid, buf, caption=cap, parse_mode=None)
+                log_chat(tid, "out", ("📷 Photo" + (f": {text}" if text else "")))
+            else:
+                bot.send_document(tid, (fname, _io.BytesIO(photo.read())), caption=cap, parse_mode=None)
+                log_chat(tid, "out", ("📎 File: " + fname + (f" — {text}" if text else "")))
         elif text:
             bot.send_message(tid, text, parse_mode=None)
             log_chat(tid, "out", text)
         else:
-            flash("Write a message or attach a photo first.")
+            flash("Write a message or attach a photo/file first.")
             return redirect(url_for("support_thread", tid=tid))
         flash("Sent to customer in Telegram ✓")
     except Exception as e:
