@@ -19,7 +19,7 @@
 <form method=post><input type=hidden name=section value=cats>
 <table><tr><th></th><th>Name</th><th>Emoji</th><th>Logo (animated, in bot)</th></tr>
 {% for r in cats %}<tr>
-<td>{% if logos[r.id] %}<img src="/logo-img/{{ logos[r.id] }}" alt="" style="height:30px;width:30px;object-fit:contain;border-radius:7px">{% else %}{{ r.emoji }}{% endif %}</td>
+<td>{% if brands[r.id] %}<img src="/brand-logo/{{ r.id }}" alt="" onerror="this.style.display='none'" style="height:26px;max-width:100px;object-fit:contain;background:rgba(255,255,255,.85);padding:3px 6px;border-radius:7px">{% elif logos[r.id] %}<img src="/logo-img/{{ logos[r.id] }}" alt="" style="height:30px;width:30px;object-fit:contain;border-radius:7px">{% else %}{{ r.emoji }}{% endif %}</td>
 <td><input name="cat_{{ r.id }}_name" value="{{ r.name }}"></td>
 <td><input name="cat_{{ r.id }}_emoji" value="{{ r.emoji }}" style="width:80px"></td>
 <td><select name="cat_{{ r.id }}_logo"><option value="">None — use emoji</option>{% for label, lid in logo_options %}<option value="{{ lid }}" {% if logos[r.id]==lid %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></td>
