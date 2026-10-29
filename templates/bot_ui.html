@@ -1,8 +1,10 @@
 {% extends "base.html" %}{% block body %}
-<h1><svg class="h-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8V5"/><circle cx="12" cy="3.4" r="1.2"/><rect x="4" y="8" width="16" height="11" rx="2.5"/><circle cx="9" cy="13" r="1.05" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r="1.05" fill="currentColor" stroke="none"/><path d="M9.5 16.5h5"/></svg>Bot UI &amp; Design</h1><p class=sub>Everything here saves to the live bot immediately — no redeploy needed.</p>
+<h1><svg class="h-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8V5"/><circle cx="12" cy="3.4" r="1.2"/><rect x="4" y="8" width="16" height="11" rx="2.5"/><circle cx="9" cy="13" r="1.05" fill="currentColor" stroke="none"/><circle cx="15" cy="13" r="1.05" fill="currentColor" stroke="none"/><path d="M9.5 16.5h5"/></svg>Bot UI &amp; Design</h1><p class=sub>Everything here saves to the live bot immediately — no redeploy needed. Tap a section to open it.</p>
+<style>.coll-head{cursor:pointer;display:flex;align-items:center;font-size:16.5px;font-weight:700;user-select:none}.coll-head .chev{width:18px;height:18px;margin-left:auto;flex:none;transition:transform .3s}.card.open .coll-head .chev{transform:rotate(180deg)}.coll-body{margin-top:14px}</style>
+
 {% with ms = get_flashed_messages() %}{% if ms %}<div class=card style="border-color:#34d399">{{ ms[0] }}</div>{% endif %}{% endwith %}
 
-<div class=card><h3 style="margin-top:0"><svg class="h-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="7.6" r="1.1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="10" r="1.1" fill="currentColor" stroke="none"/><path d="M12 21a2.4 2.4 0 0 1 0-4.8h2.2A3.6 3.6 0 0 0 17.8 12"/></svg>Design</h3><form method=post>
+<div class=card><div class=coll-head><svg class="h-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="7.6" r="1.1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="10" r="1.1" fill="currentColor" stroke="none"/><path d="M12 21a2.4 2.4 0 0 1 0-4.8h2.2A3.6 3.6 0 0 0 17.8 12"/></svg>Design<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div><div class=coll-body hidden><form method=post>
 <input type=hidden name=section value=design>
 <label>Shop title (leave empty for default)
 <input name=shop_title value="{{ shop_title }}" placeholder="My Digital Shop"></label>
@@ -13,9 +15,9 @@
 <label>Products per row
 <select name=prod_cols><option value="1" {% if prod_cols=="1" %}selected{% endif %}>1 per row</option><option value="2" {% if prod_cols=="2" %}selected{% endif %}>2 per row</option></select></label>
 <label style="display:flex;gap:8px;align-items:center"><input type=checkbox name=show_counts value="1" {% if show_counts=="1" %}checked{% endif %} style="width:auto"> Show product counts on category buttons</label>
-<button>Save design</button></form></div>
+<button>Save design</button></form></div></div>
 
-<div class=card><h3 style="margin-top:0"><svg class="h-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Payment Methods (Top-up deposits)</h3>
+<div class=card><div class=coll-head><svg class="h-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Payment Methods (Top-up deposits)<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div><div class=coll-body hidden>
 <p style="color:var(--dim)">When a customer deposits in the bot they: enter an amount → pick one of these methods → see its payment details → tap "I have transferred" → send a screenshot. The request then appears under <b>Top-ups</b> for your approval.</p>
 {% for pm in pmethods %}
 <form method=post style="border-top:1px solid rgba(255,255,255,.18);padding-top:12px;margin-top:12px">
@@ -31,8 +33,8 @@
 <input type=hidden name=section value=pay_add>
 <label>New method name<input name=pm_name placeholder="e.g. KBZ Pay / Wave Money / USDT (TRC20)"></label>
 <label>Payment details<textarea name=pm_details rows=3 placeholder="Account number, account name, any instructions"></textarea></label>
-<button>Add payment method</button></form></div>
-<div class=card><h3 style="margin-top:0"><svg class="h-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg>Categories — name, emoji &amp; company logo</h3>
+<button>Add payment method</button></form></div></div>
+<div class=card><div class=coll-head><svg class="h-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg>Categories — name, emoji &amp; company logo<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></div><div class=coll-body hidden>
 <form method=post><input type=hidden name=section value=cats>
 <table><tr><th></th><th>Name</th><th>Emoji</th><th>Logo (animated, in bot)</th></tr>
 {% for r in cats %}<tr>
@@ -42,5 +44,5 @@
 <td><select name="cat_{{ r.id }}_logo"><option value="">None — use emoji</option>{% for label, lid in logo_options %}<option value="{{ lid }}" {% if logos[r.id]==lid %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></td>
 </tr>{% endfor %}</table>
 <button>Save categories</button></form>
-<p style="color:var(--dim);font-size:13px">Logos come from your Telegram pack “ApplicationEmoji”. A category with a logo shows the animated logo as its Shop button icon; the emoji is the fallback and what customers on older Telegram versions see.</p></div>
-{% endblock %}
+<p style="color:var(--dim);font-size:13px">Logos come from your Telegram pack “ApplicationEmoji”. A category with a logo shows the animated logo as its Shop button icon; the emoji is the fallback and what customers on older Telegram versions see.</p></div></div>
+<script>document.querySelectorAll('.coll-head').forEach(function(h){h.addEventListener('click',function(){var card=h.parentElement,body=card.querySelector('.coll-body'),open=card.classList.toggle('open');body.hidden=!open})});</script>{% endblock %}
