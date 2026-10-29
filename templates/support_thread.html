@@ -16,8 +16,11 @@
 </div>
 <div class=card><h3 style="margin-top:0">✍️ Reply to this customer</h3>
 <form method=post action="/admin/support/{{ tid }}/reply" enctype="multipart/form-data">
-<textarea name=text rows=3 placeholder="Type your message… it will be sent to the customer in Telegram as the bot."></textarea>
-<label>Attach a photo (optional)<input type=file name=photo accept="image/*"></label>
-<button>Send to customer</button></form>
-<p style="color:var(--dim);font-size:13px">If you attach a photo, the text becomes its caption. The customer must have started the bot at least once.</p></div>
+<div style="display:flex;gap:8px;align-items:flex-end">
+<label title="Attach a photo or file" style="flex:0 0 auto;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-size:20px;cursor:pointer;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.35);margin:0">📎<input type=file name=attach hidden onchange="document.getElementById('fname').textContent=this.files[0]?('📎 '+this.files[0].name):''"></label>
+<textarea name=text rows=2 style="flex:1;margin:0" placeholder="Type your message… it will be sent to the customer in Telegram as the bot."></textarea>
+<button title="Send" style="flex:0 0 auto;width:46px;height:46px;border-radius:50%;padding:0;font-size:19px;display:grid;place-items:center">➤</button>
+</div>
+<div id=fname style="color:var(--dim);font-size:13px;margin-top:6px"></div></form>
+<p style="color:var(--dim);font-size:13px">Tap 📎 to attach a photo or a file (PDF, ZIP, …) — the text becomes its caption. The customer must have started the bot at least once.</p></div>
 {% endblock %}
