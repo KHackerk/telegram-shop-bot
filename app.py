@@ -280,8 +280,8 @@ STRINGS = {
  "new_title": "<b>📣 Latest stock updates</b>", "new_empty": "No stock yet — check back soon.", "stock_word": "stock",
  "out_of_stock": "❌ Out of stock", "oos_alert": "This product is out of stock right now — please check back later.",
  "confirm_body": "🛒 <b>Confirm purchase</b>\n\nProduct: <b>{name}</b>\nPrice: <b>{price}</b>\nYour balance: {bal}\n\n{price} will be deducted from your balance. Are you sure you want to buy it?",
- "confirm_btn": "✅ Confirm", "wait_text": "⏳ Please wait a moment…",
- "delivery_note": "\n\n📝 <b>Note:</b> Please log in using the account details above. Take a screenshot or copy this message and keep it saved in your notes.\n\nIf you have any problem logging in, tap the Appeal button below to contact customer service.",
+ "confirm_btn": "✅ Confirm", "wait_text": "⏳ Please wait — your order is being confirmed…",
+ "delivery_note": "\n\n⚠️ <b>Notice:</b> Please take a screenshot of this account, or copy it and keep it saved in your notes. Log in immediately after purchasing the account.\n\nIf you have any problem logging in, tap the Customer service (Appeal) button below to file an appeal.",
  "appeal_btn": "📩 Appeal to customer service",
  "appeal_prompt": "✍️ Please send a message describing the problem you want to report. Customer service will reply as soon as they are online.",
  "appeal_sent": "✅ Your message has been sent to customer service. They will reply as soon as they are online.",
@@ -320,8 +320,8 @@ STRINGS = {
  "new_title": "<b>📣 နောက်ဆုံး Stock အသစ်များ</b>", "new_empty": "Stock အသစ် မရှိသေးပါ — နောက်မှ ပြန်ကြည့်ပါ။", "stock_word": "stock",
  "out_of_stock": "❌ ပစ္စည်းကုန်သွားပါပြီ", "oos_alert": "ဒီ product က stock ကုန်နေပါတယ် — နောက်မှ ပြန်ကြည့်ပါ။",
  "confirm_body": "🛒 <b>ဝယ်ယူမှု အတည်ပြုရန်</b>\n\nပစ္စည်း: <b>{name}</b>\nဈေးနှုန်း: <b>{price}</b>\nသင့်လက်ကျန်ငွေ: {bal}\n\n{price} ကို သင့်လက်ကျန်ငွေထဲက ဖြတ်ပါမယ်။ ဝယ်မှာ သေချာပါသလား?",
- "confirm_btn": "✅ အတည်ပြုသည်", "wait_text": "⏳ ခဏစောင့်ပါ…",
- "delivery_note": "\n\n📝 <b>မှတ်ချက်:</b> အပေါ်က အကောင့် အချက်အလက်တွေနဲ့ ဝင်ရောက်ပါ။ Screenshot ရိုက်ထားပါ (သို့) ဒီ message ကို copy လုပ်ပြီး note ထဲမှာ သိမ်းထားပါ။\n\nဝင်ရောက်လို့ အဆင်မပြေရင် အောက်က Appeal ခလုတ်ကို နှိပ်ပြီး customer service ကို ဆက်သွယ်ပါ။",
+ "confirm_btn": "✅ အတည်ပြုသည်", "wait_text": "⏳ ခဏစောင့်ပါ — သင့် order ကို အတည်ပြုနေပါတယ်…",
+ "delivery_note": "\n\n⚠️ <b>သတိပြုရန်:</b> ဒီအကောင့်ကို screenshot ယူထားပါ (သို့) copy နှိပ်ပြီး note ထဲမှာ မှတ်သားထားပါ။ အကောင့် ဝယ်ယူပြီးတာနဲ့ ချက်ချင်း ဝင်ရောက်ပါ။\n\nဝင်ရောက်လို့ အဆင်မပြေရင် အောက်က Customer service ခလုတ်ကို နှိပ်ပြီး appeal တင်နိုင်ပါတယ်။",
  "appeal_btn": "📩 Customer service သို့ Appeal တင်ရန်",
  "appeal_prompt": "✍️ တင်ပြချင်တဲ့ အကြောင်းအရာကို message ပို့ပေးပါ။ Customer service လိုင်းပေါ် ရှိတာနဲ့ စာပြန်ပေးပါမယ်။",
  "appeal_sent": "✅ သင့် message ကို customer service ဆီ ပို့ပေးပြီးပါပြီ။ လိုင်းပေါ် ရှိတာနဲ့ စာပြန်ပေးပါမယ်။",
@@ -514,16 +514,16 @@ if BOT_TOKEN:
                 kb.add(InlineKeyboardButton("✅ Buy now", callback_data=f"cbuy_{pid}"),
                        InlineKeyboardButton("❤️ Save", callback_data=f"save_{pid}"))
                 kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop"))
-                show(f"<b>{p['name']}</b>\n\n{p['description']}\n\nPrice: <b>{money(p['price_cents'])}</b>\nStock: {stock}", kb)
+                show(f"<b>{p['name']}</b>\n\nPrice: <b>{money(p['price_cents'])}</b>\nStock: {stock}", kb)
             elif total > 0:
                 kb.add(InlineKeyboardButton(tr(uid, 'out_of_stock'), callback_data="oos"))
                 kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop"))
-                show(f"<b>{p['name']}</b>\n\n{p['description']}\n\nPrice: <b>{money(p['price_cents'])}</b>\n{tr(uid, 'out_of_stock')}", kb)
+                show(f"<b>{p['name']}</b>\n\nPrice: <b>{money(p['price_cents'])}</b>\n{tr(uid, 'out_of_stock')}", kb)
             else:
                 kb.add(InlineKeyboardButton("✅ Buy now", callback_data=f"cbuy_{pid}"),
                        InlineKeyboardButton("❤️ Save", callback_data=f"save_{pid}"))
                 kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop"))
-                show(f"<b>{p['name']}</b>\n\n{p['description']}\n\nPrice: <b>{money(p['price_cents'])}</b>", kb)
+                show(f"<b>{p['name']}</b>\n\nPrice: <b>{money(p['price_cents'])}</b>", kb)
         elif data == "oos":
             bot.answer_callback_query(call.id, tr(uid, 'oos_alert'), show_alert=True); c.close(); return
         elif data.startswith("save_"):
@@ -562,7 +562,10 @@ if BOT_TOKEN:
             if item:
                 cur = c.execute("INSERT INTO orders(user_id,product_id,price_cents,status,delivery) VALUES(?,?,?,'delivered',?)", (call.from_user.id, pid, p["price_cents"], item["content"]))
                 c.execute("UPDATE stock_items SET is_sold=1, order_id=? WHERE id=?", (cur.lastrowid, item["id"])); c.commit()
-                show(f"✅ <b>Order #{cur.lastrowid} delivered</b>\n\n{hesc(item['content'])}" + tr(uid, 'delivery_note'), akb)
+                show(f"✅ <b>Order #{cur.lastrowid} completed</b>\n\n{hesc(item['content'])}" + tr(uid, 'delivery_note'), akb)
+            elif (p["description"] or "").strip():
+                cur = c.execute("INSERT INTO orders(user_id,product_id,price_cents,status,delivery) VALUES(?,?,?,'delivered',?)", (call.from_user.id, pid, p["price_cents"], p["description"])); c.commit()
+                show(f"✅ <b>Order #{cur.lastrowid} completed</b>\n\n{hesc(p['description'])}" + tr(uid, 'delivery_note'), akb)
             else:
                 cur = c.execute("INSERT INTO orders(user_id,product_id,price_cents,status) VALUES(?,?,?,'pending')", (call.from_user.id, pid, p["price_cents"])); c.commit()
                 show(f"✅ <b>Order #{cur.lastrowid} created (Pending)</b>\nAdmin will deliver it soon. Check My orders.", akb)
