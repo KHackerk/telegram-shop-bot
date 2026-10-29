@@ -58,6 +58,9 @@ def init_db():
     CREATE TABLE IF NOT EXISTS saved(
       user_id INTEGER, product_id INTEGER, PRIMARY KEY(user_id, product_id));
     """)
+    _cols = [r["name"] for r in c.execute("PRAGMA table_info(categories)").fetchall()]
+    if "logo_id" not in _cols:
+        c.execute("ALTER TABLE categories ADD COLUMN logo_id TEXT DEFAULT ''")
     if c.execute("SELECT COUNT(*) n FROM categories").fetchone()["n"] == 0:
         seed = [
             ("ChatGPT Plus","🌀"),("Capcut Pro","✂️"),("Mail Box","📧"),("Figma","🖌️"),
@@ -91,6 +94,25 @@ def init_db():
 LOGO_EMOJI = {"ChatGPT Plus": "5359726582447487916", "Capcut Pro": "5364339557712020484",
               "Telegram": "5330237710655306682", "Japan TikTok Account": "5327982530702359565",
               "WhatsApp": "5334998226636390258", "Spotify": "5346074681004801565"}
+LOGO_OPTIONS = [("ChatGPT logo", "5359726582447487916"), ("CapCut logo", "5364339557712020484"),
+                ("Telegram logo", "5330237710655306682"), ("TikTok logo", "5327982530702359565"),
+                ("WhatsApp logo", "5334998226636390258"), ("Spotify logo", "5346074681004801565")]
+_LOGO_THUMB_CACHE = {}
+
+def cat_logo(cat):
+    try: v = cat["logo_id"]
+    except Exception: v = None
+    return v or LOGO_EMOJI.get(cat["name"], "")
+
+def logo_thumb_bytes(cid):
+    if cid in _LOGO_THUMB_CACHE: return _LOGO_THUMB_CACHE[cid]
+    sts = bot.get_custom_emoji_stickers([str(cid)])
+    if not sts: return None
+    thumb = getattr(sts[0], "thumbnail", None) or getattr(sts[0], "thumb", None)
+    if thumb is None: return None
+    f = bot.get_file(thumb.file_id); raw = bot.download_file(f.file_path)
+    _LOGO_THUMB_CACHE[cid] = raw
+    return raw
 
 def money(cents): return f"${cents/100:.2f}"
 def tier(total_spent_cents):
@@ -209,12 +231,13 @@ if BOT_TOKEN:
             raw_rows, kb = [], InlineKeyboardMarkup(row_width=cat_cols)
             for cat in cats:
                 cnt = c.execute("SELECT COUNT(*) n FROM products WHERE category_id=? AND active=1", (cat["id"],)).fetchone()["n"]
-                logo = LOGO_EMOJI.get(cat["name"])
+                logo = cat_logo(cat)
+                _lbl = f"{cat['name']} ({cnt})" if get_setting("show_counts", "1") == "1" else cat["name"]
                 if logo:
-                    btn = {"text": f"{cat['name']} ({cnt})", "callback_data": f"cat_{cat['id']}", "icon_custom_emoji_id": logo}
-                    fb_text = f"{cat['emoji']} {cat['name']} ({cnt})"
+                    btn = {"text": _lbl, "callback_data": f"cat_{cat['id']}", "icon_custom_emoji_id": logo}
+                    fb_text = f"{cat['emoji']} {_lbl}"
                 else:
-                    btn = {"text": f"{cat['emoji']} {cat['name']} ({cnt})", "callback_data": f"cat_{cat['id']}"}
+                    btn = {"text": f"{cat['emoji']} {_lbl}", "callback_data": f"cat_{cat['id']}"}
                     fb_text = btn["text"]
                 if not raw_rows or len(raw_rows[-1]) >= cat_cols: raw_rows.append([])
                 raw_rows[-1].append(btn)
@@ -222,10 +245,13 @@ if BOT_TOKEN:
             raw_rows.append([{"text": "⬅️ Back", "callback_data": "home"}])
             kb.add(InlineKeyboardButton("⬅️ Back", callback_data="home"))
             import json as _json
+            _title = get_setting("shop_title", "") or f"🛍️ {SHOP_NAME}"
+            _sub = get_setting("shop_subtitle", "") or "Choose a category:"
+            _head = f"<b>{hesc(_title)}</b>\n{hesc(_sub)}"
             try:
-                show(f"<b>🛍️ {SHOP_NAME}</b>\nChoose a category:", _json.dumps({"inline_keyboard": raw_rows}))
+                show(_head, _json.dumps({"inline_keyboard": raw_rows}))
             except Exception:
-                show(f"<b>🛍️ {SHOP_NAME}</b>\nChoose a category:", kb)
+                show(_head, kb)
         elif data.startswith("cat_"):
             cid = int(data[4:]); prods = c.execute("SELECT * FROM products WHERE category_id=? AND active=1", (cid,)).fetchall()
             try: prod_cols = max(1, min(2, int(get_setting("prod_cols", "1"))))
@@ -430,14 +456,28 @@ def dashboard():
       "pending_topups": c.execute("SELECT COUNT(*) n FROM topups WHERE status='pending'").fetchone()["n"]}
     c.close(); return render_template("dashboard.html", s=s, money=money, shop=SHOP_NAME)
 
+@app.route("/logo-img/<cid>")
+def logo_img(cid):
+    if not bot or not str(cid).isdigit(): abort(404)
+    try:
+        raw = logo_thumb_bytes(cid)
+        if not raw: abort(404)
+        from flask import Response
+        r = Response(raw, mimetype="image/webp"); r.headers["Cache-Control"] = "public, max-age=86400"
+        return r
+    except Exception:
+        abort(404)
+
 @app.route("/admin/categories", methods=["GET","POST"])
 @login_required
 def categories():
     c = db()
     if request.method == "POST":
-        c.execute("INSERT INTO categories(name,emoji) VALUES(?,?)", (request.form["name"], request.form.get("emoji",""))); c.commit()
-    rows = c.execute("SELECT * FROM categories ORDER BY sort,id").fetchall(); c.close()
-    return render_template("categories.html", rows=rows, shop=SHOP_NAME)
+        c.execute("INSERT INTO categories(name,emoji,logo_id) VALUES(?,?,?)", (request.form["name"], request.form.get("emoji",""), request.form.get("logo_id",""))); c.commit()
+    rows = c.execute("SELECT * FROM categories ORDER BY sort,id").fetchall()
+    logos = {r["id"]: cat_logo(r) for r in rows}
+    c.close()
+    return render_template("categories.html", rows=rows, logos=logos, logo_options=LOGO_OPTIONS, shop=SHOP_NAME)
 
 @app.route("/admin/categories/<int:cid>/delete")
 @login_required
@@ -499,6 +539,32 @@ def balance(tid):
     c = db(); c.execute("UPDATE users SET balance_cents=balance_cents+? WHERE telegram_id=?", (int(float(request.form["amount"])*100), tid)); c.commit(); c.close()
     return redirect(url_for("users"))
 
+@app.route("/admin/support/<int:tid>/reply", methods=["POST"])
+@login_required
+def support_reply(tid):
+    text = (request.form.get("text") or "").strip()
+    photo = request.files.get("photo")
+    if not bot:
+        flash("Bot is off (no BOT_TOKEN) — cannot send.")
+        return redirect(url_for("support_thread", tid=tid))
+    try:
+        if photo and photo.filename:
+            import io as _io
+            buf = _io.BytesIO(photo.read()); buf.name = photo.filename or "photo.jpg"
+            cap = text if text else None
+            bot.send_photo(tid, buf, caption=cap, parse_mode=None)
+            log_chat(tid, "out", ("📷 Photo" + (f": {text}" if text else "")))
+        elif text:
+            bot.send_message(tid, text, parse_mode=None)
+            log_chat(tid, "out", text)
+        else:
+            flash("Write a message or attach a photo first.")
+            return redirect(url_for("support_thread", tid=tid))
+        flash("Sent to customer in Telegram ✓")
+    except Exception as e:
+        flash(f"Could not send: {type(e).__name__}: {str(e)[:150]}")
+    return redirect(url_for("support_thread", tid=tid))
+
 @app.route("/admin/topups")
 @login_required
 def topups():
@@ -509,12 +575,31 @@ def topups():
 @login_required
 def bot_ui():
     if request.method == "POST":
-        for key in ("cat_cols", "prod_cols"):
-            v = request.form.get(key, "")
-            if v in ("1", "2"): set_setting(key, v)
-        flash("Bot UI settings saved — they apply to the bot immediately.")
+        if request.form.get("section") == "design":
+            for key in ("cat_cols", "prod_cols"):
+                v = request.form.get(key, "")
+                if v in ("1", "2"): set_setting(key, v)
+            set_setting("shop_title", request.form.get("shop_title", "").strip())
+            set_setting("shop_subtitle", request.form.get("shop_subtitle", "").strip())
+            set_setting("show_counts", "1" if request.form.get("show_counts") else "0")
+            flash("Design settings saved — the bot uses them immediately.")
+        elif request.form.get("section") == "cats":
+            c = db()
+            for r in c.execute("SELECT id FROM categories").fetchall():
+                cid = r["id"]
+                nm = request.form.get(f"cat_{cid}_name", "").strip()
+                em = request.form.get(f"cat_{cid}_emoji", "")
+                lg = request.form.get(f"cat_{cid}_logo", "")
+                if nm: c.execute("UPDATE categories SET name=?, emoji=?, logo_id=? WHERE id=?", (nm, em, lg, cid))
+            c.commit(); c.close()
+            flash("Category name / emoji / logo saved — live in the bot now.")
         return redirect(url_for("bot_ui"))
-    return render_template("bot_ui.html", cat_cols=get_setting("cat_cols", "2"), prod_cols=get_setting("prod_cols", "1"), shop=SHOP_NAME)
+    c = db(); cats = c.execute("SELECT * FROM categories ORDER BY sort,id").fetchall(); c.close()
+    logos = {r["id"]: cat_logo(r) for r in cats}
+    return render_template("bot_ui.html", cats=cats, logos=logos, logo_options=LOGO_OPTIONS,
+                           cat_cols=get_setting("cat_cols", "2"), prod_cols=get_setting("prod_cols", "1"),
+                           shop_title=get_setting("shop_title", ""), shop_subtitle=get_setting("shop_subtitle", ""),
+                           show_counts=get_setting("show_counts", "1"), shop=SHOP_NAME)
 
 @app.route("/admin/support")
 @login_required
