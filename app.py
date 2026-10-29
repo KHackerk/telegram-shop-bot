@@ -275,6 +275,7 @@ STRINGS = {
  "new_title": "<b>📣 Latest stock updates</b>", "new_empty": "No stock yet — check back soon.", "stock_word": "stock",
  "shop_choose": "Choose a category:",
  "dep_approved": "✅ <b>Deposit approved!</b>\n\nAmount: <b>{amt}</b>\nNew balance: <b>{bal}</b>\n\nThank you! 🙏",
+ "bal_adj": "💰 <b>Balance update</b>\n\nThe shop adjusted your balance by <b>{amt}</b>.\nNew balance: <b>{bal}</b>",
  "dep_rejected": "❌ <b>Deposit not approved</b>\n\nAmount: <b>{amt}</b>\n\nPlease check your transfer and screenshot, then try again — or contact Customer Support.",
 },
 "my": {
@@ -307,6 +308,7 @@ STRINGS = {
  "new_title": "<b>📣 နောက်ဆုံး Stock အသစ်များ</b>", "new_empty": "Stock အသစ် မရှိသေးပါ — နောက်မှ ပြန်ကြည့်ပါ။", "stock_word": "stock",
  "shop_choose": "အမျိုးအစား ရွေးပါ:",
  "dep_approved": "✅ <b>Deposit အတည်ပြုပြီးပါပြီ!</b>\n\nပမာဏ: <b>{amt}</b>\nလက်ကျန် အသစ်: <b>{bal}</b>\n\nကျေးဇူးတင်ပါတယ်! 🙏",
+ "bal_adj": "💰 <b>လက်ကျန်ငွေ ပြင်ဆင်ချက်</b>\n\nဆိုင်မှ သင့်လက်ကျန်ငွေကို <b>{amt}</b> ပြင်ဆင်လိုက်ပါတယ်။\nလက်ကျန် အသစ်: <b>{bal}</b>",
  "dep_rejected": "❌ <b>Deposit အတည်မပြုပါ</b>\n\nပမာဏ: <b>{amt}</b>\n\nငွေလွှဲမှုနဲ့ screenshot ကို စစ်ပြီး ပြန်ကြိုးစားပါ — သို့မဟုတ် Customer Support ကို ဆက်သွယ်ပါ။",
 }}
 
@@ -951,7 +953,41 @@ def users():
 @app.route("/admin/users/<int:tid>/balance", methods=["POST"])
 @login_required
 def balance(tid):
-    c = db(); c.execute("UPDATE users SET balance_cents=balance_cents+? WHERE telegram_id=?", (int(float(request.form["amount"])*100), tid)); c.commit(); c.close()
+    raw = (request.form.get("amount") or "").strip().replace(",", "")
+    mode = request.form.get("mode", "add")
+    try:
+        amt = int(float(raw) * 100)
+    except Exception:
+        amt = 0
+    if amt <= 0:
+        flash("Enter an amount in MMK first — e.g. 5000.")
+        return redirect(url_for("users"))
+    c = db(); u = c.execute("SELECT * FROM users WHERE telegram_id=?", (tid,)).fetchone()
+    if not u:
+        c.close(); flash("User not found."); return redirect(url_for("users"))
+    old = u["balance_cents"]
+    if mode == "reduce":
+        delta = -min(amt, old)
+    else:
+        delta = amt
+    new = old + delta
+    c.execute("UPDATE users SET balance_cents=? WHERE telegram_id=?", (new, tid)); c.commit(); c.close()
+    who = f"@{u['username']}" if u["username"] else (u["first_name"] or str(tid))
+    log_event("balance_adjust", f"user={tid} delta={delta} new={new}")
+    if bot and delta != 0:
+        try:
+            lang = u["lang"] if u["lang"] in ("en", "my") else "en"
+            signed = ("+" if delta > 0 else "−") + money(abs(delta))
+            txt = STRINGS[lang]["bal_adj"].format(amt=signed, bal=money(new))
+            bot.send_message(tid, txt); log_chat(tid, "out", plain(txt))
+        except Exception:
+            pass
+    if mode == "reduce" and amt > old:
+        flash(f"Reduced {who} by {money(-delta)} (amount was more than the balance) — new balance {money(new)}.")
+    elif delta > 0:
+        flash(f"Added {money(delta)} to {who} — new balance {money(new)}.")
+    else:
+        flash(f"Reduced {who} by {money(-delta)} — new balance {money(new)}.")
     return redirect(url_for("users"))
 
 @app.route("/admin/support/<int:tid>/reply", methods=["POST"])
