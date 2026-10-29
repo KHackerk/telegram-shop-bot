@@ -456,6 +456,55 @@ def dashboard():
       "pending_topups": c.execute("SELECT COUNT(*) n FROM topups WHERE status='pending'").fetchone()["n"]}
     c.close(); return render_template("dashboard.html", s=s, money=money, shop=SHOP_NAME)
 
+# Real company logos for the ADMIN dashboard, fetched from public logo sources
+# (Simple Icons CDN + Wikimedia Commons) and cached in-process.
+_SI = "https://cdn.simpleicons.org/"
+_WM = "https://commons.wikimedia.org/wiki/Special:FilePath/"
+BRAND_LOGOS = {
+  "ChatGPT Plus": _WM + "ChatGPT_logo.svg",
+  "Capcut Pro": _WM + "CapCut_logo.svg",
+  "Mail Box": _SI + "gmail",
+  "Figma": _SI + "figma",
+  "Gemini": _SI + "googlegemini",
+  "Cursor & Grok": _SI + "cursor",
+  "Codex API": _WM + "OpenAI_Logo.svg",
+  "Claude": _SI + "anthropic",
+  "Muse Ai": _SI + "meta",
+  "MS Office": _WM + "Microsoft_logo_%282012%29.svg",
+  "n8n": _SI + "n8n",
+  "Adobe": _WM + "Adobe_Systems_logo_and_wordmark.svg",
+  "Duolingo": _SI + "duolingo",
+  "Streaming": _SI + "netflix",
+  "VPN": _SI + "protonvpn",
+  "Telegram": _SI + "telegram",
+  "Japan TikTok Account": _SI + "tiktok",
+  "WhatsApp": _SI + "whatsapp",
+  "Spotify": _SI + "spotify",
+}
+_BRAND_CACHE = {}
+
+@app.route("/brand-logo/<int:cat_id>")
+def brand_logo(cat_id):
+    c = db(); r = c.execute("SELECT name FROM categories WHERE id=?", (cat_id,)).fetchone(); c.close()
+    if not r: abort(404)
+    url = BRAND_LOGOS.get(r["name"])
+    if not url: abort(404)
+    from flask import Response
+    if cat_id in _BRAND_CACHE:
+        raw, mime = _BRAND_CACHE[cat_id]
+    else:
+        try:
+            import urllib.request as _u
+            req = _u.Request(url, headers={"User-Agent": "Mozilla/5.0 (shop-admin logo fetch)"})
+            raw = _u.urlopen(req, timeout=12).read()
+            head = raw[:200].lstrip()
+            mime = "image/svg+xml" if (head.startswith(b"<svg") or head.startswith(b"<?xml")) else "image/png"
+            _BRAND_CACHE[cat_id] = (raw, mime)
+        except Exception:
+            abort(404)
+    resp = Response(raw, mimetype=mime); resp.headers["Cache-Control"] = "public, max-age=86400"
+    return resp
+
 @app.route("/logo-img/<cid>")
 def logo_img(cid):
     if not bot or not str(cid).isdigit(): abort(404)
@@ -476,8 +525,9 @@ def categories():
         c.execute("INSERT INTO categories(name,emoji,logo_id) VALUES(?,?,?)", (request.form["name"], request.form.get("emoji",""), request.form.get("logo_id",""))); c.commit()
     rows = c.execute("SELECT * FROM categories ORDER BY sort,id").fetchall()
     logos = {r["id"]: cat_logo(r) for r in rows}
+    brands = {r["id"]: (r["name"] in BRAND_LOGOS) for r in rows}
     c.close()
-    return render_template("categories.html", rows=rows, logos=logos, logo_options=LOGO_OPTIONS, shop=SHOP_NAME)
+    return render_template("categories.html", rows=rows, logos=logos, brands=brands, logo_options=LOGO_OPTIONS, shop=SHOP_NAME)
 
 @app.route("/admin/categories/<int:cid>/delete")
 @login_required
@@ -596,7 +646,8 @@ def bot_ui():
         return redirect(url_for("bot_ui"))
     c = db(); cats = c.execute("SELECT * FROM categories ORDER BY sort,id").fetchall(); c.close()
     logos = {r["id"]: cat_logo(r) for r in cats}
-    return render_template("bot_ui.html", cats=cats, logos=logos, logo_options=LOGO_OPTIONS,
+    brands = {r["id"]: (r["name"] in BRAND_LOGOS) for r in cats}
+    return render_template("bot_ui.html", cats=cats, logos=logos, brands=brands, logo_options=LOGO_OPTIONS,
                            cat_cols=get_setting("cat_cols", "2"), prod_cols=get_setting("prod_cols", "1"),
                            shop_title=get_setting("shop_title", ""), shop_subtitle=get_setting("shop_subtitle", ""),
                            show_counts=get_setting("show_counts", "1"), shop=SHOP_NAME)
