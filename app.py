@@ -335,10 +335,27 @@ def topup_act(tid, act):
 @app.route("/health")
 def health(): return {"ok": True, "bot": bool(BOT_TOKEN), "shop": SHOP_NAME}
 
+@app.route("/bot-status")
+def bot_status():
+    # Safe diagnostics: never returns the token itself.
+    if not bot: return {"bot": False}
+    try:
+        info = bot.get_webhook_info()
+        return {"bot": True, "webhook_url": info.url or "", "pending_updates": info.pending_update_count,
+                "last_error": info.last_error_message or "", "max_connections": info.max_connections}
+    except Exception as e:
+        return {"bot": True, "webhook_error": str(e)[:200]}
+
 def setup_webhook():
     base = os.environ.get("RENDER_EXTERNAL_URL") or os.environ.get("WEBHOOK_URL")
+    print(f"[startup] BOT set: {bool(BOT_TOKEN)}, base URL: {base}", flush=True)
     if bot and base:
-        bot.remove_webhook(); time.sleep(1); bot.set_webhook(url=base.rstrip("/") + "/webhook")
+        try:
+            bot.remove_webhook(); time.sleep(1)
+            ok = bot.set_webhook(url=base.rstrip("/") + "/webhook")
+            print(f"[startup] set_webhook -> {ok} for {base.rstrip('/')}/webhook", flush=True)
+        except Exception as e:
+            print(f"[startup] set_webhook FAILED: {e}", flush=True)
 
 if __name__ == "__main__":
     if bot and not (os.environ.get("RENDER_EXTERNAL_URL") or os.environ.get("WEBHOOK_URL")):
