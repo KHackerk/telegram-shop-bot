@@ -273,6 +273,7 @@ STRINGS = {
  "lang_title": "<b>🌐 Language / ဘာသာစကား</b>\n\nChoose your language:",
  "orders_title": "<b>📦 My orders</b>", "orders_empty": "No orders yet.",
  "new_title": "<b>📣 Latest stock updates</b>", "new_empty": "No stock yet — check back soon.", "stock_word": "stock",
+ "out_of_stock": "❌ Out of stock", "oos_alert": "This product is out of stock right now — please check back later.",
  "shop_choose": "Choose a category:",
  "dep_approved": "✅ <b>Deposit approved!</b>\n\nAmount: <b>{amt}</b>\nNew balance: <b>{bal}</b>\n\nThank you! 🙏",
  "bal_adj": "💰 <b>Balance update</b>\n\nThe shop adjusted your balance by <b>{amt}</b>.\nNew balance: <b>{bal}</b>",
@@ -306,6 +307,7 @@ STRINGS = {
  "lang_title": "<b>🌐 Language / ဘာသာစကား</b>\n\nChoose your language / ဘာသာစကား ရွေးပါ:",
  "orders_title": "<b>📦 ကျွန်ုပ်၏ အော်ဒါများ</b>", "orders_empty": "အော်ဒါ မရှိသေးပါ။",
  "new_title": "<b>📣 နောက်ဆုံး Stock အသစ်များ</b>", "new_empty": "Stock အသစ် မရှိသေးပါ — နောက်မှ ပြန်ကြည့်ပါ။", "stock_word": "stock",
+ "out_of_stock": "❌ ပစ္စည်းကုန်သွားပါပြီ", "oos_alert": "ဒီ product က stock ကုန်နေပါတယ် — နောက်မှ ပြန်ကြည့်ပါ။",
  "shop_choose": "အမျိုးအစား ရွေးပါ:",
  "dep_approved": "✅ <b>Deposit အတည်ပြုပြီးပါပြီ!</b>\n\nပမာဏ: <b>{amt}</b>\nလက်ကျန် အသစ်: <b>{bal}</b>\n\nကျေးဇူးတင်ပါတယ်! 🙏",
  "bal_adj": "💰 <b>လက်ကျန်ငွေ ပြင်ဆင်ချက်</b>\n\nဆိုင်မှ သင့်လက်ကျန်ငွေကို <b>{amt}</b> ပြင်ဆင်လိုက်ပါတယ်။\nလက်ကျန် အသစ်: <b>{bal}</b>",
@@ -465,16 +467,26 @@ if BOT_TOKEN:
             kb = InlineKeyboardMarkup(row_width=prod_cols)
             for p in prods:
                 stock = c.execute("SELECT COUNT(*) n FROM stock_items WHERE product_id=? AND is_sold=0", (p["id"],)).fetchone()["n"]
-                kb.add(InlineKeyboardButton(f"{p['name']} — {money(p['price_cents'])} · stock {stock}", callback_data=f"prod_{p['id']}"))
+                if stock > 0:
+                    kb.add(InlineKeyboardButton(f"{p['name']} — {money(p['price_cents'])} · stock {stock}", callback_data=f"prod_{p['id']}"))
+                else:
+                    kb.add(InlineKeyboardButton(f"{p['name']} — {money(p['price_cents'])} · {tr(uid, 'out_of_stock')}", callback_data=f"prod_{p['id']}"))
             kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop")); show("<b>Products</b>", kb)
         elif data.startswith("prod_"):
             pid = int(data[5:]); p = c.execute("SELECT * FROM products WHERE id=?", (pid,)).fetchone()
             stock = c.execute("SELECT COUNT(*) n FROM stock_items WHERE product_id=? AND is_sold=0", (pid,)).fetchone()["n"]
             kb = InlineKeyboardMarkup(row_width=2)
-            kb.add(InlineKeyboardButton("✅ Buy now", callback_data=f"buy_{pid}"),
-                   InlineKeyboardButton("❤️ Save", callback_data=f"save_{pid}"))
-            kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop"))
-            show(f"<b>{p['name']}</b>\n\n{p['description']}\n\nPrice: <b>{money(p['price_cents'])}</b>\nStock: {stock}", kb)
+            if stock > 0:
+                kb.add(InlineKeyboardButton("✅ Buy now", callback_data=f"buy_{pid}"),
+                       InlineKeyboardButton("❤️ Save", callback_data=f"save_{pid}"))
+                kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop"))
+                show(f"<b>{p['name']}</b>\n\n{p['description']}\n\nPrice: <b>{money(p['price_cents'])}</b>\nStock: {stock}", kb)
+            else:
+                kb.add(InlineKeyboardButton(tr(uid, 'out_of_stock'), callback_data="oos"))
+                kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop"))
+                show(f"<b>{p['name']}</b>\n\n{p['description']}\n\nPrice: <b>{money(p['price_cents'])}</b>\n{tr(uid, 'out_of_stock')}", kb)
+        elif data == "oos":
+            bot.answer_callback_query(call.id, tr(uid, 'oos_alert'), show_alert=True); c.close(); return
         elif data.startswith("save_"):
             pid = int(data[5:]); c.execute("INSERT OR IGNORE INTO saved VALUES(?,?)", (call.from_user.id, pid)); c.commit()
             bot.answer_callback_query(call.id, "Saved ❤️"); 
@@ -482,17 +494,15 @@ if BOT_TOKEN:
             pid = int(data[4:]); p = c.execute("SELECT * FROM products WHERE id=?", (pid,)).fetchone()
             u = c.execute("SELECT * FROM users WHERE telegram_id=?", (call.from_user.id,)).fetchone()
             if not u: bot.answer_callback_query(call.id, "Send /start first"); c.close(); return
+            item = c.execute("SELECT * FROM stock_items WHERE product_id=? AND is_sold=0 ORDER BY id LIMIT 1", (pid,)).fetchone()
+            if not item:
+                bot.answer_callback_query(call.id, tr(uid, 'oos_alert'), show_alert=True); c.close(); return
             if u["balance_cents"] < p["price_cents"]:
                 show(f"❌ Not enough balance.\nYou have {money(u['balance_cents'])}, need {money(p['price_cents'])}.\nTop up from 💳 Top up the balance — admin will approve it.", back); c.close(); return
-            item = c.execute("SELECT * FROM stock_items WHERE product_id=? AND is_sold=0 ORDER BY id LIMIT 1", (pid,)).fetchone()
             c.execute("UPDATE users SET balance_cents=balance_cents-?, total_spent_cents=total_spent_cents+? WHERE telegram_id=?", (p["price_cents"], p["price_cents"], call.from_user.id))
-            if item:
-                cur = c.execute("INSERT INTO orders(user_id,product_id,price_cents,status,delivery) VALUES(?,?,?,'delivered',?)", (call.from_user.id, pid, p["price_cents"], item["content"]))
-                c.execute("UPDATE stock_items SET is_sold=1, order_id=? WHERE id=?", (cur.lastrowid, item["id"])); c.commit()
-                show(f"✅ <b>Order #{cur.lastrowid} delivered</b>\n\n{item['content']}", back)
-            else:
-                cur = c.execute("INSERT INTO orders(user_id,product_id,price_cents,status) VALUES(?,?,?,'pending')", (call.from_user.id, pid, p["price_cents"])); c.commit()
-                show(f"✅ <b>Order #{cur.lastrowid} created (Pending)</b>\nAdmin will deliver it soon. Check My orders.", back)
+            cur = c.execute("INSERT INTO orders(user_id,product_id,price_cents,status,delivery) VALUES(?,?,?,'delivered',?)", (call.from_user.id, pid, p["price_cents"], item["content"]))
+            c.execute("UPDATE stock_items SET is_sold=1, order_id=? WHERE id=?", (cur.lastrowid, item["id"])); c.commit()
+            show(f"✅ <b>Order #{cur.lastrowid} delivered</b>\n\n{item['content']}", back)
         elif data == "orders":
             rows = c.execute("SELECT o.*, p.name FROM orders o LEFT JOIN products p ON p.id=o.product_id WHERE o.user_id=? ORDER BY o.id DESC LIMIT 20", (call.from_user.id,)).fetchall()
             txt = tr(uid, 'orders_title') + "\n\n" + ("\n".join(f"#{r['id']} · {r['name']} · {money(r['price_cents'])} · <b>{r['status']}</b>" + (f"\n{r['delivery']}" if r["delivery"] else "") for r in rows) or tr(uid, 'orders_empty'))
@@ -549,7 +559,7 @@ if BOT_TOKEN:
         elif data == "new":
             rows = c.execute("""SELECT p.*, (SELECT COUNT(*) FROM stock_items s2 WHERE s2.product_id=p.id AND s2.is_sold=0) stock,
                 (SELECT MAX(s3.id) FROM stock_items s3 WHERE s3.product_id=p.id) last_stock
-                FROM products p WHERE p.active=1 AND EXISTS(SELECT 1 FROM stock_items s WHERE s.product_id=p.id)
+                FROM products p WHERE p.active=1 AND EXISTS(SELECT 1 FROM stock_items s WHERE s.product_id=p.id AND s.is_sold=0)
                 ORDER BY last_stock DESC LIMIT 10""").fetchall()
             lines = "\n".join(f"• <b>{hesc(r['name'])}</b> — {money(r['price_cents'])} · {tr(uid, 'stock_word')}: {r['stock']}" for r in rows)
             show(tr(uid, 'new_title') + "\n\n" + (lines or tr(uid, 'new_empty')), back)
@@ -614,7 +624,7 @@ if BOT_TOKEN:
         elif screen == "new":
             rows = c.execute("""SELECT p.*, (SELECT COUNT(*) FROM stock_items s2 WHERE s2.product_id=p.id AND s2.is_sold=0) stock,
                 (SELECT MAX(s3.id) FROM stock_items s3 WHERE s3.product_id=p.id) last_stock
-                FROM products p WHERE p.active=1 AND EXISTS(SELECT 1 FROM stock_items s WHERE s.product_id=p.id)
+                FROM products p WHERE p.active=1 AND EXISTS(SELECT 1 FROM stock_items s WHERE s.product_id=p.id AND s.is_sold=0)
                 ORDER BY last_stock DESC LIMIT 10""").fetchall()
             lines = "\n".join(f"• <b>{hesc(r['name'])}</b> — {money(r['price_cents'])} · {tr(uid, 'stock_word')}: {r['stock']}" for r in rows)
             txt = tr(uid, 'new_title') + "\n\n" + (lines or tr(uid, 'new_empty'))
