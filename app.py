@@ -271,6 +271,40 @@ def emoji_pack():
     except Exception as e:
         return {"error": f"{type(e).__name__}: {str(e)[:200]}"}
 
+def _u16len(s): return len(s.encode("utf-16-le")) // 2
+
+@app.route("/emoji-catalog")
+def emoji_catalog():
+    # Sends a numbered catalog of a custom-emoji pack INTO a Telegram chat via the bot,
+    # so a human can see which index is which logo (all stickers share the same fallback char).
+    if not bot: return {"error": "bot off"}
+    chat = request.args.get("chat", "")
+    if not chat: return {"error": "chat param required"}
+    name = request.args.get("name", "ApplicationEmoji")
+    try:
+        s = bot.get_sticker_set(name)
+        stickers = list(getattr(s, "stickers", []) or [])
+        sent = 0
+        for chunk_start in range(0, len(stickers), 40):
+            chunk = stickers[chunk_start:chunk_start + 40]
+            text, entities, off = f"Pack {name} — logos {chunk_start}..{chunk_start + len(chunk) - 1}:\n", [], 0
+            off = _u16len(text)
+            for j, st in enumerate(chunk):
+                i = chunk_start + j
+                label = f"{i}:"
+                text += label; off += _u16len(label)
+                cid = getattr(st, "custom_emoji_id", None)
+                placeholder = getattr(st, "emoji", None) or "\U0001F4F1"
+                text += placeholder + " "
+                if cid:
+                    entities.append(telebot.types.MessageEntity(type="custom_emoji", offset=off, length=_u16len(placeholder), custom_emoji_id=str(cid)))
+                off += _u16len(placeholder) + 1
+            bot.send_message(int(chat), text, entities=entities, parse_mode=None)
+            sent += 1
+        return {"ok": True, "messages_sent": sent, "stickers": len(stickers)}
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {str(e)[:300]}"}
+
 @app.route("/admin")
 @login_required
 def dashboard():
