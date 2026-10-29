@@ -55,15 +55,21 @@ def init_db():
     """)
     if c.execute("SELECT COUNT(*) n FROM categories").fetchone()["n"] == 0:
         seed = [
-            ("ChatGPT Plus","🤖"),("Capcut Pro","🎬"),("Mail Box","📧"),("Figma","🎨"),
-            ("Gemini","✨"),("Cursor & Grok","💻"),("Codex API","🧩"),("Claude","🧡"),
-            ("Muse Ai","〰️"),("MS Office","🪟"),("n8n","🛍️"),("Adobe","🅰️"),
-            ("Duolingo","🦉"),("Streaming","📺"),("VPN","🌀"),
+            ("ChatGPT Plus","🌀"),("Capcut Pro","✂️"),("Mail Box","📧"),("Figma","🖌️"),
+            ("Gemini","♊"),("Cursor & Grok","🖱️"),("Codex API","🔑"),("Claude","🧡"),
+            ("Muse Ai","🎵"),("MS Office","🪟"),("n8n","🔗"),("Adobe","🅰️"),
+            ("Duolingo","🦉"),("Streaming","🍿"),("VPN","🛡️"),
         ]
         for i,(name,emoji) in enumerate(seed):
             cur = c.execute("INSERT INTO categories(name,emoji,sort) VALUES(?,?,?)",(name,emoji,i))
             c.execute("INSERT INTO products(category_id,name,description,price_cents) VALUES(?,?,?,?)",
                       (cur.lastrowid, f"{name} — 1 Month", "Admin: edit this product, set your real price and add stock in the dashboard.", 1000))
+    # Brand-matching emojis: apply to existing rows too (runs every startup, harmless to repeat)
+    EMOJI_MAP = {"ChatGPT Plus":"🌀","Capcut Pro":"✂️","Mail Box":"📧","Figma":"🖌️","Gemini":"♊",
+                 "Cursor & Grok":"🖱️","Codex API":"🔑","Claude":"🧡","Muse Ai":"🎵","MS Office":"🪟",
+                 "n8n":"🔗","Adobe":"🅰️","Duolingo":"🦉","Streaming":"🍿","VPN":"🛡️"}
+    for _name, _em in EMOJI_MAP.items():
+        c.execute("UPDATE categories SET emoji=? WHERE name=?", (_em, _name))
     c.commit(); c.close()
 
 def money(cents): return f"${cents/100:.2f}"
