@@ -1,1 +1,19 @@
-{% extends "base.html" %}{% block body %}<h1>Products</h1><div class=card><form method=post><select name=category_id>{% for c in cats %}<option value={{c.id}}>{{c.name}}</option>{% endfor %}</select><input name=name placeholder="Product name" required><input name=description placeholder="Description"><input name=price placeholder="Price MMK e.g. 5000" required><button>Add product</button></form></div><table><tr><th>ID</th><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th></th></tr>{% for r in rows %}<tr><td>{{r.id}}</td><td>{{r.name}}</td><td>{{r.cat}}</td><td>{{money(r.price_cents)}}</td><td>{% if r.stock and r.stock > 0 %}{{r.stock}}{% else %}<span style="background:linear-gradient(135deg,#f87171,#dc2626);padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600">Out of stock</span>{% endif %}</td><td><a class="btn red" href="/admin/products/{{r.id}}/delete">Delete</a></td></tr>{% endfor %}</table>{% endblock %}
+{% extends "base.html" %}{% block body %}<h1>Products</h1>
+{% with ms = get_flashed_messages() %}{% if ms %}<div class=card style="border-color:#34d399">{{ ms[0] }}</div>{% endif %}{% endwith %}
+<div class=card><form method=post><select name=category_id>{% for c in cats %}<option value={{c.id}}>{{c.name}}</option>{% endfor %}</select><input name=name placeholder="Product name" required><input name=description placeholder="Description"><input name=price placeholder="Price MMK e.g. 5000" required><button>Add product</button></form></div>
+<form method=post id=bulkform>
+<input type=hidden name=bulk_delete value=1>
+<div style="display:flex;gap:10px;align-items:center;margin:6px 0 12px;flex-wrap:wrap">
+<label style="display:flex;gap:7px;align-items:center;cursor:pointer"><input type=checkbox id=selall style="width:auto;margin:0"> Select all</label>
+<span id=selcount style="color:var(--dim);font-size:13.5px">0 selected</span>
+<button class=red id=delbtn disabled style="opacity:.45" onclick="return confirm('Delete the selected products and all their stock? This cannot be undone.')">Delete selected</button>
+</div>
+<table><tr><th style="width:42px"></th><th>ID</th><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th></th></tr>{% for r in rows %}<tr><td><input type=checkbox class=sel name=sel value="{{r.id}}" style="width:auto;margin:0"></td><td>{{r.id}}</td><td>{{r.name}}</td><td>{{r.cat}}</td><td>{{money(r.price_cents)}}</td><td>{% if r.stock and r.stock > 0 %}{{r.stock}}{% else %}<span style="background:linear-gradient(135deg,#f87171,#dc2626);padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600">Out of stock</span>{% endif %}</td><td><a class="btn red" href="/admin/products/{{r.id}}/delete" onclick="return confirm('Delete this product and all its stock?')">Delete</a></td></tr>{% endfor %}</table>
+</form>
+<script>
+var boxes=[].slice.call(document.querySelectorAll('.sel')),all=document.getElementById('selall'),cnt=document.getElementById('selcount'),btn=document.getElementById('delbtn');
+function upd(){var n=boxes.filter(function(b){return b.checked}).length;cnt.textContent=n+' selected';btn.disabled=!n;btn.style.opacity=n?'1':'.45';all.checked=n>0&&n===boxes.length;all.indeterminate=n>0&&n<boxes.length}
+boxes.forEach(function(b){b.addEventListener('change',upd)});
+all.addEventListener('change',function(){boxes.forEach(function(b){b.checked=all.checked});upd()});
+upd();
+</script>{% endblock %}
