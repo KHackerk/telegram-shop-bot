@@ -246,12 +246,13 @@ def tclear(tid):
 
 STRINGS = {
 "en": {
- "menu_shop": "🛍️ Shop", "menu_orders": "📦 My orders", "menu_wallet": "💳 Wallet",
+ "menu_shop": "🛍️ Shop", "menu_orders": "📦 My orders", "menu_wallet": "💳 Top up the balance", "menu_balance": "💰 Check my balance",
  "menu_new": "📣 What's new", "menu_support": "💬 Customer Support", "menu_lang": "🌐 Language",
  "tier": "Tier", "balance": "Balance", "total_spent": "Total spent", "to_silver": "To Silver: {x} more",
  "orders_line": "Orders: Pending: {p} · Delivered: {d} · Confirmed: {cf}", "invite_link": "Your invite link",
  "back": "⬅️ Back", "cancel": "❌ Cancel", "home": "🏠 Menu",
- "wallet_body": "<b>💳 Wallet</b>\n\n{balance_label}: <b>{bal}</b>\n\n<b>How to top up:</b>\n1️⃣ Tap ➕ Deposit below\n2️⃣ Type the amount (MMK)\n3️⃣ Choose a payment method and transfer\n4️⃣ Send your payment screenshot\n\n✅ After the admin checks and approves it, the money lands in your balance.",
+ "wallet_body": "<b>💳 Top up the balance</b>\n\n{balance_label}: <b>{bal}</b>\n\n<b>How to top up:</b>\n1️⃣ Tap ➕ Deposit below\n2️⃣ Type the amount (MMK)\n3️⃣ Choose a payment method and transfer\n4️⃣ Send your payment screenshot\n\n✅ After the admin checks and approves it, the money lands in your balance.",
+ "balance_body": "<b>💰 My balance</b>\n\n{balance_label}: <b>{bal}</b>\n{total_spent_label}: {spent}\n{tier_label}: <b>{tier}</b>",
  "deposit_btn": "➕ Deposit",
  "dep_prompt": "<b>💰 Deposit</b>\n\nType the amount you want to deposit in MMK — e.g. <b>5000</b> or <b>50000</b>.",
  "dep_choose": "<b>💰 Deposit {amt}</b>\n\nChoose a payment method:",
@@ -260,11 +261,11 @@ STRINGS = {
  "dep_transfer": "Amount to transfer: <b>{amt}</b>\n\nTransfer the amount, then tap ✅ I have transferred.",
  "dep_transferred_btn": "✅ I have transferred", "dep_methods_btn": "⬅️ Payment methods",
  "dep_send_shot": "📸 Now please <b>send your payment screenshot</b> as a photo in this chat.",
- "dep_start_again": "⚠️ Please start again from Wallet → Deposit.",
+ "dep_start_again": "⚠️ Please start again from Top up the balance → Deposit.",
  "dep_invalid": "⚠️ Please type a valid amount, e.g. 5000",
  "dep_shot_remind": "📸 Please send the screenshot as a <b>photo</b> (not text).",
- "dep_use_buttons": "👆 Please tap the buttons above to continue your deposit — or open 💳 Wallet to start over.",
- "dep_received": "✅ <b>Deposit request received!</b>\n\nAmount: <b>{amt}</b>\nMethod: <b>{method}</b>\n\nThe admin will check your screenshot and credit your balance. You can see it in 💳 Wallet.",
+ "dep_use_buttons": "👆 Please tap the buttons above to continue your deposit — or open 💳 Top up the balance to start over.",
+ "dep_received": "✅ <b>Deposit request received!</b>\n\nAmount: <b>{amt}</b>\nMethod: <b>{method}</b>\n\nThe admin will check your screenshot and credit your balance. You can check it anytime with 💰 Check my balance.",
  "dep_photo_fail": "⚠️ Could not read that photo — please send the screenshot again.",
  "dep_cancelled": "❌ Deposit cancelled.",
  "support_body": "<b>💬 Customer Support</b>\n\nNeed help with an order or a deposit? Tap the button below and message our support directly — we usually reply fast.",
@@ -277,12 +278,13 @@ STRINGS = {
  "dep_rejected": "❌ <b>Deposit not approved</b>\n\nAmount: <b>{amt}</b>\n\nPlease check your transfer and screenshot, then try again — or contact Customer Support.",
 },
 "my": {
- "menu_shop": "🛍️ ဆိုင်", "menu_orders": "📦 ကျွန်ုပ်၏ အော်ဒါများ", "menu_wallet": "💳 ပိုက်ဆံအိတ်",
+ "menu_shop": "🛍️ ဆိုင်", "menu_orders": "📦 ကျွန်ုပ်၏ အော်ဒါများ", "menu_wallet": "💳 လက်ကျန်ငွေ ဖြည့်ရန်", "menu_balance": "💰 လက်ကျန်ငွေ စစ်ရန်",
  "menu_new": "📣 အသစ်များ", "menu_support": "💬 ဖောက်သည်ဝန်ဆောင်မှု", "menu_lang": "🌐 ဘာသာစကား",
  "tier": "အဆင့်", "balance": "လက်ကျန်ငွေ", "total_spent": "စုစုပေါင်း သုံးခဲ့ငွေ", "to_silver": "Silver ရဖို့ {x} လိုပါသေးတယ်",
  "orders_line": "အော်ဒါများ: စောင့်ဆိုင်းဆဲ {p} · ပို့ပြီး {d} · အတည်ပြုပြီး {cf}", "invite_link": "သင့်ဖိတ်ကြားလင့်",
  "back": "⬅️ နောက်သို့", "cancel": "❌ ပယ်ဖျက်ရန်", "home": "🏠 ပင်မ",
- "wallet_body": "<b>💳 ပိုက်ဆံအိတ်</b>\n\n{balance_label}: <b>{bal}</b>\n\n<b>ငွေဖြည့်နည်း:</b>\n1️⃣ အောက်က ➕ Deposit ကို နှိပ်ပါ\n2️⃣ ဖြည့်မယ့် ပမာဏ (MMK) ရိုက်ပါ\n3️⃣ Payment method ရွေးပြီး ငွေလွှဲပါ\n4️⃣ Payment screenshot ပို့ပါ\n\n✅ Admin စစ်ဆေး အတည်ပြုပြီးရင် လက်ကျန်ငွေထဲ ရောက်ပါမယ်။",
+ "wallet_body": "<b>💳 လက်ကျန်ငွေ ဖြည့်ရန်</b>\n\n{balance_label}: <b>{bal}</b>\n\n<b>ငွေဖြည့်နည်း:</b>\n1️⃣ အောက်က ➕ Deposit ကို နှိပ်ပါ\n2️⃣ ဖြည့်မယ့် ပမာဏ (MMK) ရိုက်ပါ\n3️⃣ Payment method ရွေးပြီး ငွေလွှဲပါ\n4️⃣ Payment screenshot ပို့ပါ\n\n✅ Admin စစ်ဆေး အတည်ပြုပြီးရင် လက်ကျန်ငွေထဲ ရောက်ပါမယ်။",
+ "balance_body": "<b>💰 ကျွန်ုပ်၏ လက်ကျန်ငွေ</b>\n\n{balance_label}: <b>{bal}</b>\n{total_spent_label}: {spent}\n{tier_label}: <b>{tier}</b>",
  "deposit_btn": "➕ Deposit",
  "dep_prompt": "<b>💰 ငွေဖြည့်ခြင်း</b>\n\nဖြည့်သွင်းမယ့် ပမာဏကို MMK ဖြင့် ရိုက်ပါ — ဥပမာ <b>5000</b> သို့မဟုတ် <b>50000</b>။",
  "dep_choose": "<b>💰 Deposit {amt}</b>\n\nPayment method ရွေးပါ:",
@@ -291,11 +293,11 @@ STRINGS = {
  "dep_transfer": "လွှဲရမယ့် ပမာဏ: <b>{amt}</b>\n\nပမာဏကို လွှဲပြီးရင် ✅ လွှဲပြီးပါပြီ ကို နှိပ်ပါ။",
  "dep_transferred_btn": "✅ လွှဲပြီးပါပြီ", "dep_methods_btn": "⬅️ Payment methods",
  "dep_send_shot": "📸 အခု <b>ငွေလွှဲ screenshot</b> ကို ဓာတ်ပုံအဖြစ် ဒီ chat ထဲ ပို့ပေးပါ။",
- "dep_start_again": "⚠️ Wallet → Deposit ကနေ ပြန်စပါ။",
+ "dep_start_again": "⚠️ လက်ကျန်ငွေ ဖြည့်ရန် → Deposit ကနေ ပြန်စပါ။",
  "dep_invalid": "⚠️ မှန်ကန်တဲ့ ပမာဏ ရိုက်ပါ — ဥပမာ 5000",
  "dep_shot_remind": "📸 Screenshot ကို <b>ဓာတ်ပုံ</b>အဖြစ် ပို့ပါ (စာအဖြစ် မဟုတ်ပါ)။",
- "dep_use_buttons": "👆 Deposit ဆက်လုပ်ဖို့ အပေါ်က button တွေ နှိပ်ပါ — သို့မဟုတ် 💳 ပိုက်ဆံအိတ် ကနေ ပြန်စပါ။",
- "dep_received": "✅ <b>Deposit တောင်းဆိုမှု ရရှိပါပြီ!</b>\n\nပမာဏ: <b>{amt}</b>\nနည်းလမ်း: <b>{method}</b>\n\nAdmin က screenshot စစ်ဆေးပြီး လက်ကျန်ငွေ ဖြည့်ပေးပါမယ်။ 💳 ပိုက်ဆံအိတ်မှာ ကြည့်နိုင်ပါတယ်။",
+ "dep_use_buttons": "👆 Deposit ဆက်လုပ်ဖို့ အပေါ်က button တွေ နှိပ်ပါ — သို့မဟုတ် 💳 လက်ကျန်ငွေ ဖြည့်ရန် ကနေ ပြန်စပါ။",
+ "dep_received": "✅ <b>Deposit တောင်းဆိုမှု ရရှိပါပြီ!</b>\n\nပမာဏ: <b>{amt}</b>\nနည်းလမ်း: <b>{method}</b>\n\nAdmin က screenshot စစ်ဆေးပြီး လက်ကျန်ငွေ ဖြည့်ပေးပါမယ်။ 💰 လက်ကျန်ငွေ စစ်ရန် မှာ အချိန်မရွေး ကြည့်နိုင်ပါတယ်။",
  "dep_photo_fail": "⚠️ ဓာတ်ပုံ ဖတ်မရပါ — screenshot ပြန်ပို့ပေးပါ။",
  "dep_cancelled": "❌ Deposit ပယ်ဖျက်ပြီးပါပြီ။",
  "support_body": "<b>💬 ဖောက်သည်ဝန်ဆောင်မှု</b>\n\nအော်ဒါ သို့မဟုတ် ငွေဖြည့်ခြင်း အတွက် အကူအညီ လိုရင် အောက်က button ကို နှိပ်ပြီး support နဲ့ တိုက်ရိုက် စကားပြောနိုင်ပါတယ် — မြန်မြန် ပြန်ဖြေပေးပါတယ်။",
@@ -324,7 +326,7 @@ def tr(tid, key):
 
 MENU_ROUTES = {}
 for _lg in STRINGS:
-    for _k, _s in (("menu_shop", "shop"), ("menu_orders", "orders"), ("menu_wallet", "wallet"),
+    for _k, _s in (("menu_shop", "shop"), ("menu_orders", "orders"), ("menu_wallet", "wallet"), ("menu_balance", "balance"),
                    ("menu_new", "new"), ("menu_support", "support"), ("menu_lang", "lang")):
         MENU_ROUTES[STRINGS[_lg][_k]] = _s
 
@@ -379,8 +381,9 @@ if BOT_TOKEN:
                 f"{tr(uid, 'invite_link')}: https://t.me/{bot_name}?start=ref_{u['telegram_id']}")
         kb = ReplyKeyboardMarkup(resize_keyboard=True, is_persistent=True, row_width=2)
         kb.add(KeyboardButton(tr(uid, 'menu_shop')), KeyboardButton(tr(uid, 'menu_orders')))
-        kb.add(KeyboardButton(tr(uid, 'menu_wallet')), KeyboardButton(tr(uid, 'menu_new')))
-        kb.add(KeyboardButton(tr(uid, 'menu_support')), KeyboardButton(tr(uid, 'menu_lang')))
+        kb.add(KeyboardButton(tr(uid, 'menu_wallet')), KeyboardButton(tr(uid, 'menu_balance')))
+        kb.add(KeyboardButton(tr(uid, 'menu_new')), KeyboardButton(tr(uid, 'menu_support')))
+        kb.add(KeyboardButton(tr(uid, 'menu_lang')))
         chat_id = msg_or_call.chat.id if hasattr(msg_or_call, "chat") else msg_or_call.message.chat.id
         log_chat(u["telegram_id"], "out", plain(text))
         bot.send_message(chat_id, text, reply_markup=kb)
@@ -478,7 +481,7 @@ if BOT_TOKEN:
             u = c.execute("SELECT * FROM users WHERE telegram_id=?", (call.from_user.id,)).fetchone()
             if not u: bot.answer_callback_query(call.id, "Send /start first"); c.close(); return
             if u["balance_cents"] < p["price_cents"]:
-                show(f"❌ Not enough balance.\nYou have {money(u['balance_cents'])}, need {money(p['price_cents'])}.\nTop up from Wallet — admin will approve it.", back); c.close(); return
+                show(f"❌ Not enough balance.\nYou have {money(u['balance_cents'])}, need {money(p['price_cents'])}.\nTop up from 💳 Top up the balance — admin will approve it.", back); c.close(); return
             item = c.execute("SELECT * FROM stock_items WHERE product_id=? AND is_sold=0 ORDER BY id LIMIT 1", (pid,)).fetchone()
             c.execute("UPDATE users SET balance_cents=balance_cents-?, total_spent_cents=total_spent_cents+? WHERE telegram_id=?", (p["price_cents"], p["price_cents"], call.from_user.id))
             if item:
@@ -549,7 +552,7 @@ if BOT_TOKEN:
             lines = "\n".join(f"• <b>{hesc(r['name'])}</b> — {money(r['price_cents'])} · {tr(uid, 'stock_word')}: {r['stock']}" for r in rows)
             show(tr(uid, 'new_title') + "\n\n" + (lines or tr(uid, 'new_empty')), back)
         elif data == "help":
-            show("<b>🆘 Help</b>\n1. Add funds in Wallet\n2. Open Shop and buy\n3. Auto items deliver instantly; others are delivered by admin.\nContact the shop admin if an order is delayed.", back)
+            show("<b>🆘 Help</b>\n1. Top up your balance\n2. Open Shop and buy\n3. Auto items deliver instantly; others are delivered by admin.\nContact the shop admin if an order is delayed.", back)
         elif data == "settings":
             show("<b>⚙️ Settings</b>\nLanguage and notifications are coming in the admin dashboard update.", back)
         c.close()
@@ -589,6 +592,18 @@ if BOT_TOKEN:
             kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton(tr(uid, 'deposit_btn'), callback_data="dep_start"))
             kb.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
             txt = tr(uid, 'wallet_body').format(balance_label=tr(uid, 'balance'), bal=money(u['balance_cents']) if u else money(0))
+            log_chat(uid, "out", plain(txt)); bot.send_message(chat_id, txt, reply_markup=kb)
+        elif screen == "balance":
+            u = c.execute("SELECT * FROM users WHERE telegram_id=?", (uid,)).fetchone()
+            kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton(tr(uid, 'deposit_btn'), callback_data="dep_start"))
+            kb.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
+            if u:
+                txt = tr(uid, 'balance_body').format(balance_label=tr(uid, 'balance'), bal=money(u['balance_cents']),
+                        total_spent_label=tr(uid, 'total_spent'), spent=money(u['total_spent_cents']),
+                        tier_label=tr(uid, 'tier'), tier=tier(u['total_spent_cents']))
+            else:
+                txt = tr(uid, 'balance_body').format(balance_label=tr(uid, 'balance'), bal=money(0),
+                        total_spent_label=tr(uid, 'total_spent'), spent=money(0), tier_label=tr(uid, 'tier'), tier="Bronze")
             log_chat(uid, "out", plain(txt)); bot.send_message(chat_id, txt, reply_markup=kb)
         elif screen == "orders":
             rows = c.execute("SELECT o.*, p.name FROM orders o LEFT JOIN products p ON p.id=o.product_id WHERE o.user_id=? ORDER BY o.id DESC LIMIT 20", (uid,)).fetchall()
