@@ -134,6 +134,9 @@ def init_db():
     CREATE TABLE IF NOT EXISTS payment_methods(
       id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, details TEXT DEFAULT '',
       active INTEGER DEFAULT 1, sort INTEGER DEFAULT 0);
+    CREATE TABLE IF NOT EXISTS reports(
+      id INTEGER PRIMARY KEY AUTOINCREMENT, user_id BIGINT, username TEXT, first_name TEXT,
+      text TEXT, status TEXT DEFAULT 'new', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
     CREATE TABLE IF NOT EXISTS topup_sessions(
       telegram_id INTEGER PRIMARY KEY, step TEXT DEFAULT '', amount_cents INTEGER DEFAULT 0, method_id INTEGER DEFAULT 0);
     """)
@@ -274,6 +277,12 @@ STRINGS = {
  "orders_title": "<b>📦 My orders</b>", "orders_empty": "No orders yet.",
  "new_title": "<b>📣 Latest stock updates</b>", "new_empty": "No stock yet — check back soon.", "stock_word": "stock",
  "out_of_stock": "❌ Out of stock", "oos_alert": "This product is out of stock right now — please check back later.",
+ "confirm_body": "🛒 <b>Confirm purchase</b>\n\nProduct: <b>{name}</b>\nPrice: <b>{price}</b>\nYour balance: {bal}\n\n{price} will be deducted from your balance. Are you sure you want to buy it?",
+ "confirm_btn": "✅ Confirm", "wait_text": "⏳ Please wait a moment…",
+ "delivery_note": "\n\n📝 <b>Note:</b> Please log in using the account details above. Take a screenshot or copy this message and keep it saved in your notes.\n\nIf you have any problem logging in, tap the Appeal button below to contact customer service.",
+ "appeal_btn": "📩 Appeal to customer service",
+ "appeal_prompt": "✍️ Please send a message describing the problem you want to report. Customer service will reply as soon as they are online.",
+ "appeal_sent": "✅ Your message has been sent to customer service. They will reply as soon as they are online.",
  "shop_choose": "Choose a category:",
  "dep_approved": "✅ <b>Deposit approved!</b>\n\nAmount: <b>{amt}</b>\nNew balance: <b>{bal}</b>\n\nThank you! 🙏",
  "bal_adj": "💰 <b>Balance update</b>\n\nThe shop adjusted your balance by <b>{amt}</b>.\nNew balance: <b>{bal}</b>",
@@ -308,6 +317,12 @@ STRINGS = {
  "orders_title": "<b>📦 ကျွန်ုပ်၏ အော်ဒါများ</b>", "orders_empty": "အော်ဒါ မရှိသေးပါ။",
  "new_title": "<b>📣 နောက်ဆုံး Stock အသစ်များ</b>", "new_empty": "Stock အသစ် မရှိသေးပါ — နောက်မှ ပြန်ကြည့်ပါ။", "stock_word": "stock",
  "out_of_stock": "❌ ပစ္စည်းကုန်သွားပါပြီ", "oos_alert": "ဒီ product က stock ကုန်နေပါတယ် — နောက်မှ ပြန်ကြည့်ပါ။",
+ "confirm_body": "🛒 <b>ဝယ်ယူမှု အတည်ပြုရန်</b>\n\nပစ္စည်း: <b>{name}</b>\nဈေးနှုန်း: <b>{price}</b>\nသင့်လက်ကျန်ငွေ: {bal}\n\n{price} ကို သင့်လက်ကျန်ငွေထဲက ဖြတ်ပါမယ်။ ဝယ်မှာ သေချာပါသလား?",
+ "confirm_btn": "✅ အတည်ပြုသည်", "wait_text": "⏳ ခဏစောင့်ပါ…",
+ "delivery_note": "\n\n📝 <b>မှတ်ချက်:</b> အပေါ်က အကောင့် အချက်အလက်တွေနဲ့ ဝင်ရောက်ပါ။ Screenshot ရိုက်ထားပါ (သို့) ဒီ message ကို copy လုပ်ပြီး note ထဲမှာ သိမ်းထားပါ။\n\nဝင်ရောက်လို့ အဆင်မပြေရင် အောက်က Appeal ခလုတ်ကို နှိပ်ပြီး customer service ကို ဆက်သွယ်ပါ။",
+ "appeal_btn": "📩 Customer service သို့ Appeal တင်ရန်",
+ "appeal_prompt": "✍️ တင်ပြချင်တဲ့ အကြောင်းအရာကို message ပို့ပေးပါ။ Customer service လိုင်းပေါ် ရှိတာနဲ့ စာပြန်ပေးပါမယ်။",
+ "appeal_sent": "✅ သင့် message ကို customer service ဆီ ပို့ပေးပြီးပါပြီ။ လိုင်းပေါ် ရှိတာနဲ့ စာပြန်ပေးပါမယ်။",
  "shop_choose": "အမျိုးအစား ရွေးပါ:",
  "dep_approved": "✅ <b>Deposit အတည်ပြုပြီးပါပြီ!</b>\n\nပမာဏ: <b>{amt}</b>\nလက်ကျန် အသစ်: <b>{bal}</b>\n\nကျေးဇူးတင်ပါတယ်! 🙏",
  "bal_adj": "💰 <b>လက်ကျန်ငွေ ပြင်ဆင်ချက်</b>\n\nဆိုင်မှ သင့်လက်ကျန်ငွေကို <b>{amt}</b> ပြင်ဆင်လိုက်ပါတယ်။\nလက်ကျန် အသစ်: <b>{bal}</b>",
@@ -344,6 +359,23 @@ def plain(html_text):
     import re as _re
     return _re.sub("<[^>]+>", "", html_text or "").strip()
 
+ADMIN_TG_ID = int(os.environ.get("ADMIN_TG_ID", "1064450749"))
+
+def cell_table(header, rows):
+    """Render a label|value grid as a monospace box table inside <pre>."""
+    w1 = max([len(str(k)) for k, v in rows] + [1])
+    w2 = max([len(str(v)) for k, v in rows] + [1])
+    W = max(w1 + w2 + 3, len(str(header)))
+    if W > w1 + w2 + 3: w2 += W - (w1 + w2 + 3)
+    lines = ["┌" + "─" * (W + 2) + "┐",
+             "│ " + str(header).ljust(W) + " │",
+             "├" + "─" * (w1 + 2) + "┬" + "─" * (w2 + 2) + "┤"]
+    for i, (k, v) in enumerate(rows):
+        if i: lines.append("├" + "─" * (w1 + 2) + "┼" + "─" * (w2 + 2) + "┤")
+        lines.append("│ " + str(k).ljust(w1) + " │ " + str(v).ljust(w2) + " │")
+    lines.append("└" + "─" * (w1 + 2) + "┴" + "─" * (w2 + 2) + "┘")
+    return "<pre>" + "\n".join(lines) + "</pre>"
+
 # ---------- Telegram Bot (optional until BOT_TOKEN is set) ----------
 bot = None
 if BOT_TOKEN:
@@ -372,11 +404,13 @@ if BOT_TOKEN:
                   for s in ("pending","delivered","confirmed")}
         c.close()
         uid = u["telegram_id"]
-        username = f"@{hesc(u['username'])}" if u["username"] else "-"
-        text = (f"<b>{hesc(u['first_name'] or '') or username}</b>\n\n"
-                f"User ID: <code>{u['telegram_id']}</code>\nUsername: {username}\n\n"
-                f"{tr(uid, 'balance')}: <b>{money(u['balance_cents'])}</b> · {tr(uid, 'total_spent')}: {money(u['total_spent_cents'])}\n"
-                + tr(uid, 'orders_line').format(p=counts['pending'], d=counts['delivered'], cf=counts['confirmed']))
+        username = f"@{u['username']}" if u["username"] else "-"
+        rows = [("User ID", str(u["telegram_id"])),
+                ("Username", username),
+                (tr(uid, 'balance'), money(u["balance_cents"])),
+                (tr(uid, 'total_spent'), money(u["total_spent_cents"])),
+                ("Orders", f"P: {counts['pending']} · D: {counts['delivered']} · C: {counts['confirmed']}")]
+        text = cell_table(hesc(u["first_name"] or "") or username, rows)
         kb = ReplyKeyboardMarkup(resize_keyboard=True, is_persistent=True, row_width=2)
         kb.add(KeyboardButton(tr(uid, 'menu_shop')), KeyboardButton(tr(uid, 'menu_orders')))
         kb.add(KeyboardButton(tr(uid, 'menu_wallet')), KeyboardButton(tr(uid, 'menu_balance')))
@@ -475,7 +509,7 @@ if BOT_TOKEN:
             total = c.execute("SELECT COUNT(*) n FROM stock_items WHERE product_id=?", (pid,)).fetchone()["n"]
             kb = InlineKeyboardMarkup(row_width=2)
             if stock > 0:
-                kb.add(InlineKeyboardButton("✅ Buy now", callback_data=f"buy_{pid}"),
+                kb.add(InlineKeyboardButton("✅ Buy now", callback_data=f"cbuy_{pid}"),
                        InlineKeyboardButton("❤️ Save", callback_data=f"save_{pid}"))
                 kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop"))
                 show(f"<b>{p['name']}</b>\n\n{p['description']}\n\nPrice: <b>{money(p['price_cents'])}</b>\nStock: {stock}", kb)
@@ -484,7 +518,7 @@ if BOT_TOKEN:
                 kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop"))
                 show(f"<b>{p['name']}</b>\n\n{p['description']}\n\nPrice: <b>{money(p['price_cents'])}</b>\n{tr(uid, 'out_of_stock')}", kb)
             else:
-                kb.add(InlineKeyboardButton("✅ Buy now", callback_data=f"buy_{pid}"),
+                kb.add(InlineKeyboardButton("✅ Buy now", callback_data=f"cbuy_{pid}"),
                        InlineKeyboardButton("❤️ Save", callback_data=f"save_{pid}"))
                 kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop"))
                 show(f"<b>{p['name']}</b>\n\n{p['description']}\n\nPrice: <b>{money(p['price_cents'])}</b>", kb)
@@ -493,6 +527,21 @@ if BOT_TOKEN:
         elif data.startswith("save_"):
             pid = int(data[5:]); c.execute("INSERT OR IGNORE INTO saved VALUES(?,?)", (call.from_user.id, pid)); c.commit()
             bot.answer_callback_query(call.id, "Saved ❤️"); 
+        elif data.startswith("cbuy_"):
+            pid = int(data[5:]); p = c.execute("SELECT * FROM products WHERE id=?", (pid,)).fetchone()
+            u = c.execute("SELECT * FROM users WHERE telegram_id=?", (uid,)).fetchone()
+            kb = InlineKeyboardMarkup(row_width=2)
+            kb.add(InlineKeyboardButton(tr(uid, 'confirm_btn'), callback_data=f"buy_{pid}"),
+                   InlineKeyboardButton(tr(uid, 'cancel'), callback_data=f"prod_{pid}"))
+            show(tr(uid, 'confirm_body').format(name=hesc(p["name"]), price=money(p["price_cents"]),
+                 bal=money(u["balance_cents"]) if u else money(0)), kb)
+        elif data == "appeal":
+            tset(uid, "appeal")
+            kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton(tr(uid, 'cancel'), callback_data="appeal_cancel"))
+            show(tr(uid, 'appeal_prompt'), kb)
+        elif data == "appeal_cancel":
+            tclear(uid)
+            show(tr(uid, 'dep_cancelled'), back)
         elif data.startswith("buy_"):
             pid = int(data[4:]); p = c.execute("SELECT * FROM products WHERE id=?", (pid,)).fetchone()
             u = c.execute("SELECT * FROM users WHERE telegram_id=?", (call.from_user.id,)).fetchone()
@@ -503,14 +552,18 @@ if BOT_TOKEN:
                 bot.answer_callback_query(call.id, tr(uid, 'oos_alert'), show_alert=True); c.close(); return
             if u["balance_cents"] < p["price_cents"]:
                 show(f"❌ Not enough balance.\nYou have {money(u['balance_cents'])}, need {money(p['price_cents'])}.\nTop up from 💳 Top up the balance — admin will approve it.", back); c.close(); return
+            show(tr(uid, 'wait_text'), back)
+            akb = InlineKeyboardMarkup()
+            akb.add(InlineKeyboardButton(tr(uid, 'appeal_btn'), callback_data="appeal"))
+            akb.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
             c.execute("UPDATE users SET balance_cents=balance_cents-?, total_spent_cents=total_spent_cents+? WHERE telegram_id=?", (p["price_cents"], p["price_cents"], call.from_user.id))
             if item:
                 cur = c.execute("INSERT INTO orders(user_id,product_id,price_cents,status,delivery) VALUES(?,?,?,'delivered',?)", (call.from_user.id, pid, p["price_cents"], item["content"]))
                 c.execute("UPDATE stock_items SET is_sold=1, order_id=? WHERE id=?", (cur.lastrowid, item["id"])); c.commit()
-                show(f"✅ <b>Order #{cur.lastrowid} delivered</b>\n\n{item['content']}", back)
+                show(f"✅ <b>Order #{cur.lastrowid} delivered</b>\n\n{hesc(item['content'])}" + tr(uid, 'delivery_note'), akb)
             else:
                 cur = c.execute("INSERT INTO orders(user_id,product_id,price_cents,status) VALUES(?,?,?,'pending')", (call.from_user.id, pid, p["price_cents"])); c.commit()
-                show(f"✅ <b>Order #{cur.lastrowid} created (Pending)</b>\nAdmin will deliver it soon. Check My orders.", back)
+                show(f"✅ <b>Order #{cur.lastrowid} created (Pending)</b>\nAdmin will deliver it soon. Check My orders.", akb)
         elif data == "orders":
             rows = c.execute("SELECT o.*, p.name FROM orders o LEFT JOIN products p ON p.id=o.product_id WHERE o.user_id=? ORDER BY o.id DESC LIMIT 20", (call.from_user.id,)).fetchall()
             txt = tr(uid, 'orders_title') + "\n\n" + ("\n".join(f"#{r['id']} · {r['name']} · {money(r['price_cents'])} · <b>{r['status']}</b>" + (f"\n{r['delivery']}" if r["delivery"] else "") for r in rows) or tr(uid, 'orders_empty'))
@@ -617,13 +670,9 @@ if BOT_TOKEN:
             u = c.execute("SELECT * FROM users WHERE telegram_id=?", (uid,)).fetchone()
             kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton(tr(uid, 'deposit_btn'), callback_data="dep_start"))
             kb.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
-            if u:
-                txt = tr(uid, 'balance_body').format(balance_label=tr(uid, 'balance'), bal=money(u['balance_cents']),
-                        total_spent_label=tr(uid, 'total_spent'), spent=money(u['total_spent_cents']),
-                        tier_label=tr(uid, 'tier'), tier=tier(u['total_spent_cents']))
-            else:
-                txt = tr(uid, 'balance_body').format(balance_label=tr(uid, 'balance'), bal=money(0),
-                        total_spent_label=tr(uid, 'total_spent'), spent=money(0), tier_label=tr(uid, 'tier'), tier="Bronze")
+            bal = money(u['balance_cents']) if u else money(0)
+            spent = money(u['total_spent_cents']) if u else money(0)
+            txt = cell_table("💰 " + tr(uid, 'balance'), [(tr(uid, 'balance'), bal), (tr(uid, 'total_spent'), spent)])
             log_chat(uid, "out", plain(txt)); bot.send_message(chat_id, txt, reply_markup=kb)
         elif screen == "orders":
             rows = c.execute("SELECT o.*, p.name FROM orders o LEFT JOIN products p ON p.id=o.product_id WHERE o.user_id=? ORDER BY o.id DESC LIMIT 20", (uid,)).fetchall()
@@ -639,6 +688,7 @@ if BOT_TOKEN:
             log_chat(uid, "out", plain(txt)); bot.send_message(chat_id, txt, reply_markup=back)
         elif screen == "support":
             kb = InlineKeyboardMarkup()
+            kb.add(InlineKeyboardButton(tr(uid, 'appeal_btn'), callback_data="appeal"))
             kb.add(InlineKeyboardButton(tr(uid, 'support_btn'), url="https://t.me/Khant_2001"))
             kb.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
             txt = tr(uid, 'support_body')
@@ -652,9 +702,27 @@ if BOT_TOKEN:
             log_chat(uid, "out", plain(txt)); bot.send_message(chat_id, txt, reply_markup=kb)
         c.close()
 
+    def save_report(msg, text):
+        c = db(); u = c.execute("SELECT * FROM users WHERE telegram_id=?", (msg.from_user.id,)).fetchone()
+        c.execute("INSERT INTO reports(user_id,username,first_name,text) VALUES(?,?,?,?)",
+                  (msg.from_user.id, (u["username"] if u else msg.from_user.username) or "",
+                   (u["first_name"] if u else msg.from_user.first_name) or "", text)); c.commit(); c.close()
+        try:
+            bot.send_message(ADMIN_TG_ID, f"📩 <b>New customer report</b>\nFrom: {hesc(msg.from_user.first_name or '')} (@{hesc(msg.from_user.username or '-')})\nUser ID: <code>{msg.from_user.id}</code>", parse_mode="HTML")
+            bot.forward_message(ADMIN_TG_ID, msg.chat.id, msg.message_id)
+        except Exception:
+            pass
+        kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton(tr(msg.from_user.id, 'home'), callback_data="home"))
+        bot.send_message(msg.chat.id, tr(msg.from_user.id, 'appeal_sent'), reply_markup=kb)
+
     @bot.message_handler(content_types=["photo"])
     def dep_photo(msg):
         s = tget(msg.from_user.id)
+        if s and s["step"] == "appeal":
+            log_chat(msg.from_user.id, "in", "📷 Report photo")
+            save_report(msg, (msg.caption or "") + " [photo]")
+            tclear(msg.from_user.id)
+            return
         if not s or s["step"] != "screenshot" or not s["amount_cents"]: return
         try:
             data = bot.download_file(bot.get_file(msg.photo[-1].file_id).file_path)
@@ -681,6 +749,10 @@ if BOT_TOKEN:
             return
         s = tget(msg.from_user.id)
         if not s: return
+        if s["step"] == "appeal":
+            save_report(msg, msg.text or "")
+            tclear(msg.from_user.id)
+            return
         if s["step"] == "amount":
             raw = (msg.text or "").replace("$", "").replace(",", "").strip()
             try: cents = int(round(float(raw) * 100))
@@ -1135,6 +1207,19 @@ def bot_ui():
                            cat_cols=get_setting("cat_cols", "2"), prod_cols=get_setting("prod_cols", "1"),
                            shop_title=get_setting("shop_title", ""), shop_subtitle=get_setting("shop_subtitle", ""),
                            show_counts=get_setting("show_counts", "1"), shop=SHOP_NAME)
+
+@app.route("/admin/reports")
+@login_required
+def reports():
+    c = db(); rows = c.execute("SELECT * FROM reports ORDER BY id DESC LIMIT 200").fetchall(); c.close()
+    return render_template("reports.html", rows=rows, shop=SHOP_NAME)
+
+@app.route("/admin/reports/<int:rid>/toggle")
+@login_required
+def report_toggle(rid):
+    c = db(); r = c.execute("SELECT status FROM reports WHERE id=?", (rid,)).fetchone()
+    if r: c.execute("UPDATE reports SET status=? WHERE id=?", ("done" if r["status"] == "new" else "new", rid)); c.commit()
+    c.close(); return redirect(url_for("reports"))
 
 @app.route("/admin/support")
 @login_required
