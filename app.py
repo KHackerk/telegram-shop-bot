@@ -1047,7 +1047,7 @@ def support():
     rows = c.execute("""SELECT m.user_id, u.username, u.first_name, COUNT(*) n, MAX(m.ts) last_ts,
                         (SELECT text FROM chat_messages WHERE user_id=m.user_id ORDER BY id DESC LIMIT 1) last_text
                         FROM chat_messages m LEFT JOIN users u ON u.telegram_id=m.user_id
-                        GROUP BY m.user_id ORDER BY last_ts DESC""").fetchall()
+                        GROUP BY m.user_id, u.username, u.first_name ORDER BY last_ts DESC""").fetchall()
     c.close()
     return render_template("support.html", rows=rows, shop=SHOP_NAME)
 
