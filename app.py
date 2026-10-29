@@ -340,8 +340,11 @@ def bot_status():
     # Safe diagnostics: never returns the token itself.
     if not bot: return {"bot": False}
     try:
+        me = bot.get_me()
         info = bot.get_webhook_info()
-        return {"bot": True, "webhook_url": info.url or "", "pending_updates": info.pending_update_count,
+        c = db(); n = c.execute("SELECT COUNT(*) n FROM users").fetchone()["n"]; c.close()
+        return {"bot": True, "bot_username": me.username, "bot_id": me.id, "db_users": n,
+                "webhook_url": info.url or "", "pending_updates": info.pending_update_count,
                 "last_error": info.last_error_message or "", "max_connections": info.max_connections}
     except Exception as e:
         return {"bot": True, "webhook_error": str(e)[:200]}
