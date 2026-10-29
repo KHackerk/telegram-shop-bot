@@ -20,7 +20,75 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(16))
 
 # ---------- DB ----------
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+USE_PG = DATABASE_URL.startswith("postgres")
+
+_ID_TABLES = ("categories", "products", "stock_items", "orders", "topups", "payment_methods", "chat_messages", "events")
+
+def _pg_sql(sql):
+    s = sql.strip()
+    low = s.lower()
+    if low.startswith("pragma table_info("):
+        tbl = s[s.index("(") + 1:s.rindex(")")].strip()
+        return f"SELECT column_name AS name FROM information_schema.columns WHERE table_name='{tbl}'"
+    if low.startswith("pragma"):
+        return "SELECT 1 AS name WHERE FALSE"
+    if "insert or ignore into" in low:
+        s = s.replace("INSERT OR IGNORE INTO", "INSERT INTO").replace("insert or ignore into", "INSERT INTO")
+        if "on conflict" not in s.lower(): s += " ON CONFLICT DO NOTHING"
+    s = s.replace("char(10)", "chr(10)")
+    s = s.replace("ADD COLUMN screenshot BLOB", "ADD COLUMN screenshot BYTEA")
+    s = s.replace("?", "%s")
+    return s
+
+class _PgCur:
+    def __init__(self, cur): self._c = cur; self.lastrowid = None
+    def fetchone(self): return self._c.fetchone()
+    def fetchall(self): return self._c.fetchall()
+    @property
+    def rowcount(self): return self._c.rowcount
+    def __iter__(self): return iter(self._c)
+
+class _PgConn:
+    def __init__(self):
+        import psycopg2, psycopg2.extras
+        self._conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+    def execute(self, sql, params=()):
+        s = _pg_sql(sql)
+        cur = self._conn.cursor()
+        low = s.lstrip().lower()
+        want_id = False
+        if low.startswith("insert into") and "returning" not in low:
+            for tb in _ID_TABLES:
+                if low.startswith(f"insert into {tb} ") or low.startswith(f"insert into {tb}("):
+                    s += " RETURNING id"; want_id = True; break
+        cur.execute(s, tuple(params))
+        w = _PgCur(cur)
+        if want_id:
+            try:
+                row = cur.fetchone(); w.lastrowid = row["id"] if row else None
+            except Exception: pass
+        return w
+    def executemany(self, sql, seq):
+        cur = self._conn.cursor(); cur.executemany(_pg_sql(sql), [tuple(x) for x in seq]); return _PgCur(cur)
+    def executescript(self, script):
+        for stmt in _pg_ddl(script).split(";"):
+            if stmt.strip(): self.execute(stmt)
+    def commit(self): self._conn.commit()
+    def close(self): self._conn.close()
+
+def _pg_ddl(script):
+    s = script
+    s = s.replace("INTEGER PRIMARY KEY AUTOINCREMENT", "SERIAL PRIMARY KEY")
+    s = s.replace("telegram_id INTEGER PRIMARY KEY", "telegram_id BIGINT PRIMARY KEY")
+    s = s.replace("user_id INTEGER", "user_id BIGINT")
+    s = s.replace("created_at TEXT DEFAULT CURRENT_TIMESTAMP", "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    s = s.replace("ts TEXT DEFAULT CURRENT_TIMESTAMP", "ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP")
+    return s
+
 def db():
+    if USE_PG:
+        return _PgConn()
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys=ON")
@@ -914,7 +982,9 @@ def topup_img(tid):
     c = db(); r = c.execute("SELECT screenshot FROM topups WHERE id=?", (tid,)).fetchone(); c.close()
     if not r or not r["screenshot"]: abort(404)
     from flask import Response
-    return Response(r["screenshot"], mimetype="image/jpeg")
+    data = r["screenshot"]
+    if not isinstance(data, bytes): data = bytes(data)
+    return Response(data, mimetype="image/jpeg")
 
 @app.route("/admin/bot-ui", methods=["GET","POST"])
 @login_required
