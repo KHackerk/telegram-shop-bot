@@ -1,21 +1,29 @@
 {% extends "base.html" %}{% block body %}
-<h1>🤖 Bot UI</h1><p class=sub>Change how the bot looks. Press <b>Save changes</b> — the bot updates immediately, no redeploy needed.</p>
+<h1>🤖 Bot UI &amp; Design</h1><p class=sub>Everything here saves to the live bot immediately — no redeploy needed.</p>
 {% with ms = get_flashed_messages() %}{% if ms %}<div class=card style="border-color:#34d399">{{ ms[0] }}</div>{% endif %}{% endwith %}
-<div class=card><form method=post>
-<label>Shop categories per row
-<select name=cat_cols>
-<option value="1" {% if cat_cols=="1" %}selected{% endif %}>1 per row</option>
-<option value="2" {% if cat_cols=="2" %}selected{% endif %}>2 per row</option>
-</select></label>
+
+<div class=card><h3 style="margin-top:0">🎨 Design</h3><form method=post>
+<input type=hidden name=section value=design>
+<label>Shop title (leave empty for default)
+<input name=shop_title value="{{ shop_title }}" placeholder="🛍️ My Digital Shop"></label>
+<label>Shop subtitle
+<input name=shop_subtitle value="{{ shop_subtitle }}" placeholder="Choose a category:"></label>
+<label>Categories per row
+<select name=cat_cols><option value="1" {% if cat_cols=="1" %}selected{% endif %}>1 per row</option><option value="2" {% if cat_cols=="2" %}selected{% endif %}>2 per row</option></select></label>
 <label>Products per row
-<select name=prod_cols>
-<option value="1" {% if prod_cols=="1" %}selected{% endif %}>1 per row</option>
-<option value="2" {% if prod_cols=="2" %}selected{% endif %}>2 per row</option>
-</select></label>
-<button>Save changes</button>
-</form></div>
-<div class=card><b>Notes</b><br>
-· Category buttons with company logos (ChatGPT Plus, Capcut Pro, Telegram, TikTok, WhatsApp, Spotify) use animated custom-emoji icons from your ApplicationEmoji pack.<br>
-· Other categories use their emoji from the Categories page.<br>
-· Layout changes apply to the next time a customer opens Shop in the bot.</div>
+<select name=prod_cols><option value="1" {% if prod_cols=="1" %}selected{% endif %}>1 per row</option><option value="2" {% if prod_cols=="2" %}selected{% endif %}>2 per row</option></select></label>
+<label style="display:flex;gap:8px;align-items:center"><input type=checkbox name=show_counts value="1" {% if show_counts=="1" %}checked{% endif %} style="width:auto"> Show product counts on category buttons</label>
+<button>Save design</button></form></div>
+
+<div class=card><h3 style="margin-top:0">🏷️ Categories — name, emoji &amp; company logo</h3>
+<form method=post><input type=hidden name=section value=cats>
+<table><tr><th></th><th>Name</th><th>Emoji</th><th>Logo (animated, in bot)</th></tr>
+{% for r in cats %}<tr>
+<td>{% if logos[r.id] %}<img src="/logo-img/{{ logos[r.id] }}" alt="" style="height:30px;width:30px;object-fit:contain;border-radius:7px">{% else %}{{ r.emoji }}{% endif %}</td>
+<td><input name="cat_{{ r.id }}_name" value="{{ r.name }}"></td>
+<td><input name="cat_{{ r.id }}_emoji" value="{{ r.emoji }}" style="width:80px"></td>
+<td><select name="cat_{{ r.id }}_logo"><option value="">None — use emoji</option>{% for label, lid in logo_options %}<option value="{{ lid }}" {% if logos[r.id]==lid %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></td>
+</tr>{% endfor %}</table>
+<button>Save categories</button></form>
+<p style="color:var(--dim);font-size:13px">Logos come from your Telegram pack “ApplicationEmoji”. A category with a logo shows the animated logo as its Shop button icon; the emoji is the fallback and what customers on older Telegram versions see.</p></div>
 {% endblock %}
