@@ -468,7 +468,7 @@ if BOT_TOKEN:
             except Exception: cat_cols = 2
             raw_rows, kb = [], InlineKeyboardMarkup(row_width=cat_cols)
             for cat in cats:
-                cnt = c.execute("SELECT COUNT(*) n FROM stock_items s JOIN products p ON p.id=s.product_id WHERE p.category_id=? AND p.active=1 AND s.is_sold=0", (cat["id"],)).fetchone()["n"]
+                cnt = c.execute("SELECT COUNT(*) n FROM products p WHERE p.category_id=? AND p.active=1 AND NOT (EXISTS(SELECT 1 FROM stock_items s WHERE s.product_id=p.id) AND NOT EXISTS(SELECT 1 FROM stock_items s2 WHERE s2.product_id=p.id AND s2.is_sold=0))", (cat["id"],)).fetchone()["n"]
                 logo = cat_logo(cat)
                 _lbl = f"{cat['name']} ({cnt})" if get_setting("show_counts", "1") == "1" else cat["name"]
                 if logo:
@@ -641,7 +641,7 @@ if BOT_TOKEN:
             except Exception: cat_cols = 2
             raw_rows, kb = [], InlineKeyboardMarkup(row_width=cat_cols)
             for cat in cats:
-                cnt = c.execute("SELECT COUNT(*) n FROM stock_items s JOIN products p ON p.id=s.product_id WHERE p.category_id=? AND p.active=1 AND s.is_sold=0", (cat["id"],)).fetchone()["n"]
+                cnt = c.execute("SELECT COUNT(*) n FROM products p WHERE p.category_id=? AND p.active=1 AND NOT (EXISTS(SELECT 1 FROM stock_items s WHERE s.product_id=p.id) AND NOT EXISTS(SELECT 1 FROM stock_items s2 WHERE s2.product_id=p.id AND s2.is_sold=0))", (cat["id"],)).fetchone()["n"]
                 logo = cat_logo(cat)
                 _lbl = f"{cat['name']} ({cnt})" if get_setting("show_counts", "1") == "1" else cat["name"]
                 if logo:
