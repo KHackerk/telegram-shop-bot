@@ -438,7 +438,7 @@ if BOT_TOKEN:
             except Exception: cat_cols = 2
             raw_rows, kb = [], InlineKeyboardMarkup(row_width=cat_cols)
             for cat in cats:
-                cnt = c.execute("SELECT COUNT(*) n FROM products WHERE category_id=? AND active=1", (cat["id"],)).fetchone()["n"]
+                cnt = c.execute("SELECT COUNT(*) n FROM stock_items s JOIN products p ON p.id=s.product_id WHERE p.category_id=? AND p.active=1 AND s.is_sold=0", (cat["id"],)).fetchone()["n"]
                 logo = cat_logo(cat)
                 _lbl = f"{cat['name']} ({cnt})" if get_setting("show_counts", "1") == "1" else cat["name"]
                 if logo:
@@ -578,7 +578,7 @@ if BOT_TOKEN:
             except Exception: cat_cols = 2
             raw_rows, kb = [], InlineKeyboardMarkup(row_width=cat_cols)
             for cat in cats:
-                cnt = c.execute("SELECT COUNT(*) n FROM products WHERE category_id=? AND active=1", (cat["id"],)).fetchone()["n"]
+                cnt = c.execute("SELECT COUNT(*) n FROM stock_items s JOIN products p ON p.id=s.product_id WHERE p.category_id=? AND p.active=1 AND s.is_sold=0", (cat["id"],)).fetchone()["n"]
                 logo = cat_logo(cat)
                 _lbl = f"{cat['name']} ({cnt})" if get_setting("show_counts", "1") == "1" else cat["name"]
                 if logo:
@@ -930,16 +930,29 @@ def cat_delete(cid):
 def products():
     c = db()
     if request.method == "POST":
-        c.execute("INSERT INTO products(category_id,name,description,price_cents) VALUES(?,?,?,?)",
-                  (request.form["category_id"], request.form["name"], request.form.get("description",""), int(float(request.form["price"])*100))); c.commit()
+        if request.form.get("bulk_delete"):
+            n = _delete_products(c, request.form.getlist("sel")); c.commit()
+            flash(f"Deleted {n} product{'s' if n != 1 else ''} (with their stock).")
+        else:
+            c.execute("INSERT INTO products(category_id,name,description,price_cents) VALUES(?,?,?,?)",
+                      (request.form["category_id"], request.form["name"], request.form.get("description",""), int(float(request.form["price"])*100))); c.commit()
     rows = c.execute("SELECT p.*, cat.name cat, (SELECT COUNT(*) FROM stock_items s WHERE s.product_id=p.id AND s.is_sold=0) stock FROM products p LEFT JOIN categories cat ON cat.id=p.category_id ORDER BY p.id DESC").fetchall()
     cats = c.execute("SELECT * FROM categories").fetchall(); c.close()
     return render_template("products.html", rows=rows, cats=cats, money=money, shop=SHOP_NAME)
 
+def _delete_products(c, ids):
+    ids = [int(i) for i in ids]
+    if not ids: return 0
+    ph = ",".join("?" * len(ids))
+    c.execute(f"DELETE FROM stock_items WHERE product_id IN ({ph})", ids)
+    c.execute(f"DELETE FROM saved WHERE product_id IN ({ph})", ids)
+    cur = c.execute(f"DELETE FROM products WHERE id IN ({ph})", ids)
+    return cur.rowcount
+
 @app.route("/admin/products/<int:pid>/delete")
 @login_required
 def prod_delete(pid):
-    c = db(); c.execute("DELETE FROM products WHERE id=?", (pid,)); c.commit(); c.close(); return redirect(url_for("products"))
+    c = db(); _delete_products(c, [pid]); c.commit(); c.close(); return redirect(url_for("products"))
 
 @app.route("/admin/stock", methods=["GET","POST"])
 @login_required
