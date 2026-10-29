@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: telegram-shop-bot
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SHOP_NAME
+        value: My Digital Shop
+      - key: PYTHON_VERSION
+        value: 3.12.0
