@@ -285,6 +285,10 @@ STRINGS = {
  "appeal_btn": "📩 Appeal to customer service",
  "appeal_prompt": "✍️ Please send a message describing the problem you want to report. Customer service will reply as soon as they are online.",
  "appeal_sent": "✅ Your message has been sent to customer service. They will reply as soon as they are online.",
+ "buy_now": "✅ Buy now", "save_btn": "❤️ Save", "price_label": "Price", "stock_label": "Stock", "stock_word": "stock",
+ "order_done": "Order #{oid} completed", "products_title": "Products",
+ "no_balance": "❌ Not enough balance.\nYou have {bal}, need {price}.\nTop up from 💳 Top up the balance — admin will approve it.",
+ "order_pending": "✅ <b>Order #{oid} created (Pending)</b>\nAdmin will deliver it soon. Check My orders.",
  "shop_choose": "Choose a category:",
  "dep_approved": "✅ <b>Deposit approved!</b>\n\nAmount: <b>{amt}</b>\nNew balance: <b>{bal}</b>\n\nThank you! 🙏",
  "bal_adj": "💰 <b>Balance update</b>\n\nThe shop adjusted your balance by <b>{amt}</b>.\nNew balance: <b>{bal}</b>",
@@ -325,6 +329,10 @@ STRINGS = {
  "appeal_btn": "📩 Customer service သို့ Appeal တင်ရန်",
  "appeal_prompt": "✍️ တင်ပြချင်တဲ့ အကြောင်းအရာကို message ပို့ပေးပါ။ Customer service လိုင်းပေါ် ရှိတာနဲ့ စာပြန်ပေးပါမယ်။",
  "appeal_sent": "✅ သင့် message ကို customer service ဆီ ပို့ပေးပြီးပါပြီ။ လိုင်းပေါ် ရှိတာနဲ့ စာပြန်ပေးပါမယ်။",
+ "buy_now": "✅ အခုပဲ ဝယ်ရန်", "save_btn": "❤️ သိမ်းရန်", "price_label": "ဈေးနှုန်း", "stock_label": "လက်ကျန်", "stock_word": "လက်ကျန်",
+ "order_done": "အော်ဒါ #{oid} ပြီးမြောက်ပါပြီ", "products_title": "ပစ္စည်းများ",
+ "no_balance": "❌ လက်ကျန်ငွေ မလုံလောက်ပါ။\nသင့်မှာ {bal} ရှိပြီး {price} လိုအပ်ပါတယ်။\n💳 လက်ကျန်ငွေ ဖြည့်ရန် ကနေ ငွေဖြည့်ပါ — admin က အတည်ပြုပေးပါမယ်။",
+ "order_pending": "✅ <b>အော်ဒါ #{oid} လက်ခံရရှိပါပြီ (စောင့်ဆိုင်းဆဲ)</b>\nAdmin က မကြာခင် ပို့ပေးပါမယ်။ My orders မှာ စစ်ကြည့်ပါ။",
  "shop_choose": "အမျိုးအစား ရွေးပါ:",
  "dep_approved": "✅ <b>Deposit အတည်ပြုပြီးပါပြီ!</b>\n\nပမာဏ: <b>{amt}</b>\nလက်ကျန် အသစ်: <b>{bal}</b>\n\nကျေးဇူးတင်ပါတယ်! 🙏",
  "bal_adj": "💰 <b>လက်ကျန်ငွေ ပြင်ဆင်ချက်</b>\n\nဆိုင်မှ သင့်လက်ကျန်ငွေကို <b>{amt}</b> ပြင်ဆင်လိုက်ပါတယ်။\nလက်ကျန် အသစ်: <b>{bal}</b>",
@@ -499,31 +507,31 @@ if BOT_TOKEN:
                 stock = c.execute("SELECT COUNT(*) n FROM stock_items WHERE product_id=? AND is_sold=0", (p["id"],)).fetchone()["n"]
                 total = c.execute("SELECT COUNT(*) n FROM stock_items WHERE product_id=?", (p["id"],)).fetchone()["n"]
                 if stock > 0:
-                    kb.add(InlineKeyboardButton(f"{p['name']} — {money(p['price_cents'])} · stock {stock}", callback_data=f"prod_{p['id']}"))
+                    kb.add(InlineKeyboardButton(f"{p['name']} — {money(p['price_cents'])} · {tr(uid, 'stock_word')} {stock}", callback_data=f"prod_{p['id']}"))
                 elif total > 0:
                     kb.add(InlineKeyboardButton(f"{p['name']} — {money(p['price_cents'])} · {tr(uid, 'out_of_stock')}", callback_data=f"prod_{p['id']}"))
                 else:
                     kb.add(InlineKeyboardButton(f"{p['name']} — {money(p['price_cents'])}", callback_data=f"prod_{p['id']}"))
-            kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop")); show("<b>Products</b>", kb)
+            kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop")); show(f"<b>{tr(uid, 'products_title')}</b>", kb)
         elif data.startswith("prod_"):
             pid = int(data[5:]); p = c.execute("SELECT * FROM products WHERE id=?", (pid,)).fetchone()
             stock = c.execute("SELECT COUNT(*) n FROM stock_items WHERE product_id=? AND is_sold=0", (pid,)).fetchone()["n"]
             total = c.execute("SELECT COUNT(*) n FROM stock_items WHERE product_id=?", (pid,)).fetchone()["n"]
             kb = InlineKeyboardMarkup(row_width=2)
             if stock > 0:
-                kb.add(InlineKeyboardButton("✅ Buy now", callback_data=f"cbuy_{pid}"),
-                       InlineKeyboardButton("❤️ Save", callback_data=f"save_{pid}"))
+                kb.add(InlineKeyboardButton(tr(uid, 'buy_now'), callback_data=f"cbuy_{pid}"),
+                       InlineKeyboardButton(tr(uid, 'save_btn'), callback_data=f"save_{pid}"))
                 kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop"))
-                show(f"<b>{p['name']}</b>\n\nPrice: <b>{money(p['price_cents'])}</b>\nStock: {stock}", kb)
+                show(f"<b>{p['name']}</b>\n\n{tr(uid, 'price_label')}: <b>{money(p['price_cents'])}</b>\n{tr(uid, 'stock_label')}: {stock}", kb)
             elif total > 0:
                 kb.add(InlineKeyboardButton(tr(uid, 'out_of_stock'), callback_data="oos"))
                 kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop"))
-                show(f"<b>{p['name']}</b>\n\nPrice: <b>{money(p['price_cents'])}</b>\n{tr(uid, 'out_of_stock')}", kb)
+                show(f"<b>{p['name']}</b>\n\n{tr(uid, 'price_label')}: <b>{money(p['price_cents'])}</b>\n{tr(uid, 'out_of_stock')}", kb)
             else:
-                kb.add(InlineKeyboardButton("✅ Buy now", callback_data=f"cbuy_{pid}"),
-                       InlineKeyboardButton("❤️ Save", callback_data=f"save_{pid}"))
+                kb.add(InlineKeyboardButton(tr(uid, 'buy_now'), callback_data=f"cbuy_{pid}"),
+                       InlineKeyboardButton(tr(uid, 'save_btn'), callback_data=f"save_{pid}"))
                 kb.add(InlineKeyboardButton("⬅️ Back", callback_data="shop"))
-                show(f"<b>{p['name']}</b>\n\nPrice: <b>{money(p['price_cents'])}</b>", kb)
+                show(f"<b>{p['name']}</b>\n\n{tr(uid, 'price_label')}: <b>{money(p['price_cents'])}</b>", kb)
         elif data == "oos":
             bot.answer_callback_query(call.id, tr(uid, 'oos_alert'), show_alert=True); c.close(); return
         elif data.startswith("save_"):
@@ -553,7 +561,7 @@ if BOT_TOKEN:
             if not item and total > 0:
                 bot.answer_callback_query(call.id, tr(uid, 'oos_alert'), show_alert=True); c.close(); return
             if u["balance_cents"] < p["price_cents"]:
-                show(f"❌ Not enough balance.\nYou have {money(u['balance_cents'])}, need {money(p['price_cents'])}.\nTop up from 💳 Top up the balance — admin will approve it.", back); c.close(); return
+                show(tr(uid, 'no_balance').format(bal=money(u["balance_cents"]), price=money(p["price_cents"])), back); c.close(); return
             show(tr(uid, 'wait_text'), back)
             akb = InlineKeyboardMarkup()
             akb.add(InlineKeyboardButton(tr(uid, 'appeal_btn'), callback_data="appeal"))
@@ -562,13 +570,13 @@ if BOT_TOKEN:
             if item:
                 cur = c.execute("INSERT INTO orders(user_id,product_id,price_cents,status,delivery) VALUES(?,?,?,'delivered',?)", (call.from_user.id, pid, p["price_cents"], item["content"]))
                 c.execute("UPDATE stock_items SET is_sold=1, order_id=? WHERE id=?", (cur.lastrowid, item["id"])); c.commit()
-                show(f"✅ <b>Order #{cur.lastrowid} completed</b>\n\n{hesc(item['content'])}" + tr(uid, 'delivery_note'), akb)
+                show(f"✅ <b>{tr(uid, 'order_done').format(oid=cur.lastrowid)}</b>\n\n{hesc(item['content'])}" + tr(uid, 'delivery_note'), akb)
             elif (p["description"] or "").strip():
                 cur = c.execute("INSERT INTO orders(user_id,product_id,price_cents,status,delivery) VALUES(?,?,?,'delivered',?)", (call.from_user.id, pid, p["price_cents"], p["description"])); c.commit()
-                show(f"✅ <b>Order #{cur.lastrowid} completed</b>\n\n{hesc(p['description'])}" + tr(uid, 'delivery_note'), akb)
+                show(f"✅ <b>{tr(uid, 'order_done').format(oid=cur.lastrowid)}</b>\n\n{hesc(p['description'])}" + tr(uid, 'delivery_note'), akb)
             else:
                 cur = c.execute("INSERT INTO orders(user_id,product_id,price_cents,status) VALUES(?,?,?,'pending')", (call.from_user.id, pid, p["price_cents"])); c.commit()
-                show(f"✅ <b>Order #{cur.lastrowid} created (Pending)</b>\nAdmin will deliver it soon. Check My orders.", akb)
+                show(tr(uid, 'order_pending').format(oid=cur.lastrowid), akb)
         elif data == "orders":
             rows = c.execute("SELECT o.*, p.name FROM orders o LEFT JOIN products p ON p.id=o.product_id WHERE o.user_id=? ORDER BY o.id DESC LIMIT 20", (call.from_user.id,)).fetchall()
             txt = tr(uid, 'orders_title') + "\n\n" + ("\n".join(f"#{r['id']} · {r['name']} · {money(r['price_cents'])} · <b>{r['status']}</b>" + (f"\n{r['delivery']}" if r["delivery"] else "") for r in rows) or tr(uid, 'orders_empty'))
