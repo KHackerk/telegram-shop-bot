@@ -273,6 +273,50 @@ def emoji_pack():
 
 def _u16len(s): return len(s.encode("utf-16-le")) // 2
 
+@app.route("/emoji-sheet")
+def emoji_sheet():
+    # Builds ONE contact-sheet PNG for a range of pack stickers (thumbnail images + big index
+    # numbers) and sends it as a photo to the given chat, so logos can be identified visually.
+    if not bot: return {"error": "bot off"}
+    chat = request.args.get("chat", "")
+    if not chat: return {"error": "chat param required"}
+    name = request.args.get("name", "ApplicationEmoji")
+    try:
+        start = int(request.args.get("from", 0)); count = min(int(request.args.get("count", 30)), 50)
+    except Exception:
+        return {"error": "bad from/count"}
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+        import io as _io
+        s = bot.get_sticker_set(name)
+        stickers = list(getattr(s, "stickers", []) or [])[start:start + count]
+        cell, cols = 200, 5
+        rows = (len(stickers) + cols - 1) // cols
+        img = Image.new("RGB", (cols * cell, rows * cell), (24, 26, 32))
+        d = ImageDraw.Draw(img)
+        try: font = ImageFont.load_default(size=44)
+        except Exception: font = ImageFont.load_default()
+        placed = 0
+        for j, st in enumerate(stickers):
+            thumb = getattr(st, "thumbnail", None) or getattr(st, "thumb", None)
+            x, y = (j % cols) * cell, (j // cols) * cell
+            if thumb is not None:
+                try:
+                    f = bot.get_file(thumb.file_id)
+                    raw = bot.download_file(f.file_path)
+                    tile = Image.open(_io.BytesIO(raw)).convert("RGBA")
+                    tile.thumbnail((cell - 60, cell - 60))
+                    img.paste(tile, (x + 30, y + 10), tile)
+                    placed += 1
+                except Exception:
+                    pass
+            d.text((x + cell // 2, y + cell - 52), str(start + j), fill=(255, 210, 60), font=font, anchor="ma")
+        buf = _io.BytesIO(); img.save(buf, format="PNG"); buf.seek(0)
+        bot.send_photo(int(chat), buf, caption=f"{name} logos {start}..{start + len(stickers) - 1} — reply with the numbers for your apps")
+        return {"ok": True, "from": start, "count": len(stickers), "placed": placed}
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {str(e)[:300]}"}
+
 @app.route("/emoji-catalog")
 def emoji_catalog():
     # Sends a numbered catalog of a custom-emoji pack INTO a Telegram chat via the bot,
