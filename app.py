@@ -6,6 +6,7 @@ Telegram Digital Shop Bot + Admin Web Dashboard
 Only sell products you are authorised to sell.
 """
 import os, sqlite3, secrets, threading, time
+from html import escape as hesc
 from functools import wraps
 from datetime import datetime
 from flask import Flask, request, session, redirect, url_for, render_template, flash, abort
@@ -108,10 +109,10 @@ if BOT_TOKEN:
         c.close()
         t = tier(u["total_spent_cents"])
         to_next = max(0, 10000 - u["total_spent_cents"]) if t == "Bronze" else 0
-        username = f"@{u['username']}" if u["username"] else "-"
+        username = f"@{hesc(u['username'])}" if u["username"] else "-"
         try: bot_name = bot.get_me().username
         except: bot_name = "your_bot"
-        text = (f"<b>{u['first_name'] or username}</b>\n\n"
+        text = (f"<b>{hesc(u['first_name'] or '') or username}</b>\n\n"
                 f"Tier: <b>{t}</b>\nUser ID: <code>{u['telegram_id']}</code>\nUsername: {username}\n\n"
                 f"Balance: <b>{money(u['balance_cents'])}</b> · Total spent: {money(u['total_spent_cents'])}\n"
                 + (f"To Silver: {money(to_next)} more\n" if t=="Bronze" else "")
@@ -140,7 +141,6 @@ if BOT_TOKEN:
         except Exception as e:
             log_event("start_reply_failed", f"{type(e).__name__}: {e}")
             print(f"[bot] /start handler failed: {type(e).__name__}: {e}", flush=True)
-            raise
 
     @bot.message_handler(commands=["menu"])
     def menu(msg): main_menu(msg)
