@@ -51,8 +51,9 @@ class _PgCur:
 
 class _PgConn:
     def __init__(self):
-        import psycopg2, psycopg2.extras
-        self._conn = psycopg2.connect(DATABASE_URL, cursor_factory=psycopg2.extras.RealDictCursor)
+        import psycopg
+        from psycopg.rows import dict_row
+        self._conn = psycopg.connect(DATABASE_URL, row_factory=dict_row)
     def execute(self, sql, params=()):
         s = _pg_sql(sql)
         cur = self._conn.cursor()
