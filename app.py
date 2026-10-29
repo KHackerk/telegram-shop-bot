@@ -1067,6 +1067,12 @@ def stock():
     rows = c.execute("SELECT s.*, p.name FROM stock_items s JOIN products p ON p.id=s.product_id ORDER BY s.id DESC LIMIT 100").fetchall(); c.close()
     return render_template("stock.html", rows=rows, prods=prods, shop=SHOP_NAME)
 
+@app.route("/admin/stock/<int:sid>/delete")
+@login_required
+def stock_delete(sid):
+    c = db(); c.execute("DELETE FROM stock_items WHERE id=?", (sid,)); c.commit(); c.close()
+    return redirect(url_for("stock"))
+
 @app.route("/admin/orders", methods=["GET","POST"])
 @login_required
 def orders():
