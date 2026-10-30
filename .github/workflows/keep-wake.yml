@@ -1,0 +1,11 @@
+name: keep-wake
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the shop service so Render free does not spin it down
+        run: curl -sS -m 100 https://telegram-shop-bot-t2ow.onrender.com/health || true
