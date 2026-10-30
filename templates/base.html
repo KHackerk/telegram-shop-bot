@@ -1,47 +1,45 @@
 <!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
-<title>{{shop}} Admin — Glassy</title>
+<title>{{shop}} Admin</title>
 <style>
 *{box-sizing:border-box}
-:root{--glass:rgba(255,255,255,.16);--stroke:rgba(255,255,255,.35);--txt:#fff;--dim:rgba(255,255,255,.75);--green:#34d399}
-body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--txt);margin:0;min-height:100vh;background:#5b7a9d}
-body::before{content:"";position:fixed;inset:0;z-index:-2;background:linear-gradient(180deg,rgba(38,64,96,.22),rgba(20,28,40,.32)),url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='900' viewBox='0 0 1600 900'%3E%3Cdefs%3E%3ClinearGradient id='s' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%237fa8cf'/%3E%3Cstop offset='.45' stop-color='%23d9b48c'/%3E%3Cstop offset='.7' stop-color='%23a97e5f'/%3E%3Cstop offset='1' stop-color='%235e4633'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='1600' height='900' fill='url(%23s)'/%3E%3Cpolygon points='0,520 260,330 520,500 760,300 1040,520 1280,360 1600,540 1600,900 0,900' fill='%234a6076' opacity='.55'/%3E%3Cpolygon points='0,620 300,460 620,640 920,440 1240,660 1600,500 1600,900 0,900' fill='%23333f4e' opacity='.65'/%3E%3Crect y='700' width='1600' height='200' fill='%23423325' opacity='.8'/%3E%3C/svg%3E") center/cover no-repeat fixed}
-@keyframes floatUp{from{opacity:0;transform:translateY(26px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+:root{--glass:rgba(255,255,255,.045);--stroke:rgba(110,231,170,.16);--txt:#f2f7f3;--dim:rgba(226,240,231,.62);--green:#22c55e;--deep:#065f46}
+body{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:var(--txt);margin:0;min-height:100vh;background:#020604}
+body::before{content:"";position:fixed;inset:0;z-index:-2;background:radial-gradient(900px 520px at 85% -10%,rgba(6,95,70,.38),transparent 60%),radial-gradient(760px 480px at -10% 110%,rgba(4,60,40,.5),transparent 60%),linear-gradient(180deg,#03130a,#020604)}
+@keyframes floatUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-.glass,.card,table{background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);border:1px solid var(--stroke);border-radius:20px;box-shadow:0 18px 50px rgba(10,20,35,.28),inset 0 1px 0 rgba(255,255,255,.35)}
-.sidebar{position:fixed;left:14px;top:14px;bottom:14px;width:224px;z-index:20;display:flex;flex-direction:column;gap:2px;padding:16px 12px;border-radius:22px;background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);border:1px solid var(--stroke);box-shadow:0 18px 50px rgba(10,20,35,.28);overflow-y:auto;animation:fadeIn .8s ease both}
+.glass,.card,table{background:var(--glass);border:1px solid var(--stroke);border-radius:20px;box-shadow:0 18px 44px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.05)}
+.sidebar{position:fixed;left:14px;top:14px;bottom:14px;width:224px;z-index:20;display:flex;flex-direction:column;gap:2px;padding:16px 12px;border-radius:22px;background:rgba(3,17,10,.88);border:1px solid var(--stroke);box-shadow:0 18px 44px rgba(0,0,0,.55);overflow-y:auto;animation:fadeIn .8s ease both}
 .sidebar .brand{font-weight:700;font-size:17px;padding:4px 10px 14px}
 .sidebar a{color:var(--txt);text-decoration:none;padding:10px 12px;border-radius:12px;font-size:14.5px;display:flex;align-items:center;gap:11px;transition:all .25s cubic-bezier(.22,1,.36,1)}
 .nav-ic{width:19px;height:19px;flex:none;opacity:.92}
-.brand{display:flex;align-items:center;gap:9px}.brand svg{width:20px;height:20px;flex:none}
+.brand{display:flex;align-items:center;gap:9px}.brand svg{width:20px;height:20px;flex:none;color:var(--green)}
 .h-ic{width:.92em;height:.92em;vertical-align:-.1em;margin-right:7px}
 .stat .icon svg{width:21px;height:21px}
-.sidebar a:hover{background:rgba(255,255,255,.22);transform:translateX(3px)}
+.sidebar a:hover{background:rgba(34,197,94,.14);transform:translateX(3px)}
 .sidebar .spacer{flex:1}
 .wrap{max-width:1080px;margin:0 auto;margin-left:262px;padding:22px 16px 44px}
 @media(max-width:900px){.sidebar{position:static;width:auto;margin:12px;flex-direction:row;flex-wrap:wrap;align-items:center}.sidebar .brand{padding:4px 8px}.sidebar .spacer{display:none}.wrap{margin-left:0}}
-h1{font-size:clamp(26px,4vw,40px);margin:8px 0 4px;animation:floatUp .7s cubic-bezier(.22,1,.36,1) both}
-.sub{color:var(--dim);animation:floatUp .7s .08s cubic-bezier(.22,1,.36,1) both}
-.card{padding:18px;margin:14px 0;animation:floatUp .7s cubic-bezier(.22,1,.36,1) both;transition:transform .35s cubic-bezier(.22,1,.36,1),background .35s}
-.card:hover{transform:translateY(-5px);background:rgba(255,255,255,.20)}
+h1{font-size:clamp(26px,4vw,40px);margin:8px 0 4px;animation:floatUp .6s cubic-bezier(.22,1,.36,1) both}
+.sub{color:var(--dim);animation:floatUp .6s .06s cubic-bezier(.22,1,.36,1) both}
+.card{padding:18px;margin:14px 0;animation:floatUp .6s cubic-bezier(.22,1,.36,1) both}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin:16px 0}
-.stat{padding:20px;border-radius:20px;background:var(--glass);-webkit-backdrop-filter:blur(20px) saturate(170%);backdrop-filter:blur(20px) saturate(170%);border:1px solid var(--stroke);box-shadow:0 18px 50px rgba(10,20,35,.25);animation:floatUp .7s cubic-bezier(.22,1,.36,1) both;transition:transform .35s cubic-bezier(.22,1,.36,1)}
-.stat:nth-child(2){animation-delay:.08s}.stat:nth-child(3){animation-delay:.16s}.stat:nth-child(4){animation-delay:.24s}
-.stat:hover{transform:translateY(-5px)}
+.stat{padding:20px;border-radius:20px;background:var(--glass);border:1px solid var(--stroke);box-shadow:0 18px 44px rgba(0,0,0,.45);animation:floatUp .6s cubic-bezier(.22,1,.36,1) both}
+.stat:nth-child(2){animation-delay:.06s}.stat:nth-child(3){animation-delay:.12s}.stat:nth-child(4){animation-delay:.18s}
 .stat .row{display:flex;justify-content:space-between;align-items:center;color:var(--dim);font-size:14px}
 .stat h2{font-size:30px;margin:10px 0 6px}
-.icon{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-size:20px;background:linear-gradient(135deg,rgba(255,255,255,.45),rgba(255,255,255,.08))}
+.icon{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-size:20px;background:linear-gradient(135deg,rgba(34,197,94,.35),rgba(6,95,70,.25));color:#bbf7d0}
 .up{color:var(--green);font-weight:600}
-table{width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;animation:floatUp .7s .1s cubic-bezier(.22,1,.36,1) both}
-td,th{padding:11px 12px;border-bottom:1px solid rgba(255,255,255,.16);text-align:left;color:var(--txt)}
-tr{transition:background .25s}tr:hover{background:rgba(255,255,255,.08)}
-input,select,textarea{padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.16);color:#fff;width:100%;margin:6px 0;outline:none;transition:all .25s}
-input::placeholder,textarea::placeholder{color:rgba(255,255,255,.55)}
-input:focus,select:focus,textarea:focus{background:rgba(255,255,255,.24);border-color:rgba(255,255,255,.7)}
+table{width:100%;border-collapse:separate;border-spacing:0;overflow:hidden;animation:floatUp .6s .08s cubic-bezier(.22,1,.36,1) both}
+td,th{padding:11px 12px;border-bottom:1px solid rgba(255,255,255,.07);text-align:left;color:var(--txt)}
+tr{transition:background .25s}tr:hover{background:rgba(34,197,94,.06)}
+input,select,textarea{padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#fff;width:100%;margin:6px 0;outline:none;transition:all .25s}
+input::placeholder,textarea::placeholder{color:rgba(255,255,255,.4)}
+input:focus,select:focus,textarea:focus{background:rgba(255,255,255,.08);border-color:rgba(34,197,94,.65)}
 option{color:#111}
-button,.btn{background:linear-gradient(135deg,#2fd673,#16a34a);color:#fff;border:0;padding:10px 18px;border-radius:12px;cursor:pointer;text-decoration:none;display:inline-block;font-weight:600;box-shadow:0 8px 24px rgba(22,163,74,.35);transition:all .3s cubic-bezier(.22,1,.36,1)}
-button:hover,.btn:hover{transform:translateY(-2px) scale(1.02)}
-.red{background:linear-gradient(135deg,#f87171,#dc2626);box-shadow:0 8px 24px rgba(220,38,38,.3)}
-a{color:#bae6fd}
+button,.btn{background:linear-gradient(135deg,#0da35c,#065f46);color:#fff;border:0;padding:10px 18px;border-radius:12px;cursor:pointer;text-decoration:none;display:inline-block;font-weight:600;box-shadow:0 8px 22px rgba(6,95,70,.45);transition:all .3s cubic-bezier(.22,1,.36,1)}
+button:hover,.btn:hover{transform:translateY(-2px)}
+.red{background:linear-gradient(135deg,#f87171,#b91c1c);box-shadow:0 8px 22px rgba(185,28,28,.35)}
+a{color:#6ee7a3}
 @media(max-width:640px){.stat h2{font-size:25px}}
 </style>
 <aside class=sidebar><div class=brand><svg class="" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z"/></svg>{{shop}}</div><a href=/admin><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.8V21h14V9.8"/><path d="M9.5 21v-6h5v6"/></svg>Home</a><a href=/admin/categories><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>Categories</a><a href=/admin/products><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8v8a2 2 0 0 1-1 1.73l-7 4a2 2 0 0 1-2 0l-7-4A2 2 0 0 1 3 16V8a2 2 0 0 1 1-1.73l7-4a2 2 0 0 1 2 0l7 4A2 2 0 0 1 21 8z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>Products</a><a href=/admin/stock><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg>Stock</a><a href=/admin/orders><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M15 3v6h5"/><path d="M9 13h6M9 17h6"/></svg>Orders</a><a href=/admin/users><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Users</a><a href=/admin/topups><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Top-ups</a><a href=/admin/bot-ui><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h13"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="19" cy="18" r="2"/></svg>Bot UI</a><a href=/admin/support><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg>Support</a><a href=/admin/reports><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg>Customer reports</a><div class=spacer></div><a href=/logout><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>Logout</a></aside>

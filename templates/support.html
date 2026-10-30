@@ -1,12 +1,91 @@
 {% extends "base.html" %}{% block body %}
-<h1><svg class="h-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22z"/></svg>Support chat</h1><p class=sub>Customer conversations with the bot, newest first. History is recorded from when this feature was deployed.</p>
-{% if rows %}
-<table><tr><th>Customer</th><th>Messages</th><th>Last message</th><th>When (UTC)</th><th></th></tr>
-{% for r in rows %}<tr>
-<td>{{ r.first_name or "" }} {% if r.username %}@{{ r.username }}{% endif %}<br><small>{{ r.user_id }}</small></td>
-<td>{{ r.n }}</td><td>{{ (r.last_text or "")[:90] }}</td><td>{{ r.last_ts }}</td>
-<td><a class="btn" href="/admin/support/{{ r.user_id }}">View chat</a></td></tr>{% endfor %}</table>
+<style>
+.sup-wrap{display:grid;grid-template-columns:330px 1fr;gap:16px;align-items:start}
+@media(max-width:900px){.sup-wrap{grid-template-columns:1fr}}
+.sup-panel{background:rgba(255,255,255,.045);border:1px solid rgba(110,231,170,.16);border-radius:20px;box-shadow:0 18px 44px rgba(0,0,0,.5);overflow:hidden}
+.sup-search{margin:14px}
+.sup-search input{border-radius:999px;padding:11px 16px 11px 40px;background:rgba(255,255,255,.05);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239db8a9' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:13px center;background-size:17px;margin:0}
+.thread{display:flex;gap:12px;padding:13px 16px;text-decoration:none;color:var(--txt);border:1px solid transparent;border-radius:16px;margin:0 8px 6px;transition:all .2s}
+.thread:hover{background:rgba(34,197,94,.07)}
+.thread.sel{background:rgba(6,95,70,.22);border-color:rgba(34,197,94,.55);box-shadow:0 0 0 1px rgba(34,197,94,.25),0 10px 26px rgba(0,0,0,.35)}
+.ava{width:46px;height:46px;flex:none;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:18px;background:#0d2015;color:#7d9c8a;border:1px solid rgba(110,231,170,.25)}
+.thread.sel .ava,.sup-head .ava{background:linear-gradient(135deg,#0da35c,#065f46);color:#fff;border-color:rgba(34,197,94,.6)}
+.t-main{flex:1;min-width:0}
+.t-top{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.t-name{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.t-time{color:var(--dim);font-size:11.5px;white-space:nowrap}
+.t-prev{color:var(--dim);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+.sup-head{display:flex;align-items:center;gap:13px;padding:15px 18px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(6,40,24,.35)}
+.sup-head .ava{width:48px;height:48px}
+.pill{margin-left:auto;border:1px solid rgba(34,197,94,.55);color:#86efac;border-radius:999px;padding:8px 15px;font-size:13px;font-weight:600;white-space:nowrap;background:rgba(6,95,70,.25)}
+.divider{display:flex;align-items:center;gap:14px;margin:18px 22px 6px;color:#86efac}
+.divider:before,.divider:after{content:"";flex:1;height:1px;background:rgba(110,231,170,.18)}
+.divider span{border:1px solid rgba(110,231,170,.3);border-radius:999px;padding:5px 14px;font-size:11.5px;letter-spacing:.12em;font-weight:700;background:rgba(3,17,10,.7)}
+.chatbox{max-height:56vh;overflow-y:auto;padding:10px 20px 16px;scrollbar-width:thin;background-image:radial-gradient(rgba(255,255,255,.055) 1px,transparent 1px);background-size:22px 22px}
+.msg{display:flex;gap:9px;margin:14px 0;align-items:flex-end}
+.msg .ava{width:30px;height:30px;font-size:12.5px}
+.msg.out{justify-content:flex-end}
+.bubble{max-width:74%;padding:11px 15px;border-radius:16px;white-space:pre-wrap;word-break:break-word;font-size:14.5px;line-height:1.45}
+.msg.in .bubble{background:#0c1f13;border:1px solid rgba(110,231,170,.14);border-bottom-left-radius:6px}
+.msg.out .bubble{background:linear-gradient(135deg,#0da35c,#065f46);color:#fff;border-bottom-right-radius:6px;box-shadow:0 8px 22px rgba(6,95,70,.4)}
+.meta{font-size:11.5px;color:var(--dim);margin-top:5px}
+.msg.out .meta{text-align:right}
+.composer{border-top:1px solid rgba(255,255,255,.07);padding:14px 16px 10px;background:rgba(3,17,10,.55)}
+.composer form{display:flex;gap:10px;align-items:center}
+.cbtn{flex:none;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;cursor:pointer;background:rgba(255,255,255,.05);border:1px solid rgba(110,231,170,.3);color:#d1fae5}
+.cbtn.send{background:linear-gradient(135deg,#0da35c,#065f46);border:0;box-shadow:0 8px 22px rgba(6,95,70,.45)}
+.composer textarea{flex:1;border-radius:999px;padding:13px 20px;margin:0;resize:none;max-height:90px}
+.hint{color:var(--dim);font-size:12.5px;margin:9px 4px 4px}
+.empty{padding:44px 26px;color:var(--dim);text-align:center}
+</style>
+<h1>Support Threads</h1>
+{% with ms = get_flashed_messages() %}{% if ms %}<div class=card style="border-color:#22c55e">{{ ms[0] }}</div>{% endif %}{% endwith %}
+<div class=sup-wrap>
+<div class=sup-panel>
+<div class=sup-search><input id=q placeholder="Search username..." oninput="filterThreads()"></div>
+<div id=threads>
+{% for r in rows %}
+<a class="thread{% if sel and r.user_id==sel %} sel{% endif %}" href="/admin/support/{{ r.user_id }}" data-name="{{ (r.first_name or '')|lower }} {{ (r.username or '')|lower }}">
+<div class=ava>{{ ((r.first_name or r.username or '?')[:1])|upper }}</div>
+<div class=t-main><div class=t-top><span class=t-name>{{ r.first_name or r.username or 'Customer' }}</span><span class=t-time>{{ (r.last_ts or '')[:10] }} · {{ (r.last_ts or '')[11:16] }}</span></div>
+<div class=t-prev>{{ (r.last_text or '')[:70] }}</div></div></a>
 {% else %}
-<div class=card>No chats recorded yet. When a customer sends /start or taps buttons in the bot, their conversation will appear here.</div>
+<div class=empty>No chats recorded yet.<br>When a customer messages the bot, their conversation will appear here.</div>
+{% endfor %}
+</div>
+</div>
+<div class=sup-panel>
+{% if sel %}
+<div class=sup-head><div class=ava>{{ ((user.first_name if user else '?') or '?')[:1]|upper }}</div>
+<div><div style="font-weight:700;font-size:17px">{{ user.first_name if user else 'Customer' }}{% if user and user.username %} <span style="color:var(--dim);font-weight:400;font-size:13.5px">@{{ user.username }}</span>{% endif %}</div>
+<div style="color:var(--dim);font-size:13px">Customer conversation · replies appear in their Support chat</div></div>
+<div class=pill>💬 Support Thread</div></div>
+{% if msgs %}<div class=divider><span>{{ msgs[-1].ts[:10] }}</span></div>{% endif %}
+<div class=chatbox id=chatbox>
+{% for m in msgs %}
+{% if m.direction == 'out' %}
+<div class="msg out"><div><div class=bubble>{{ m.text }}</div><div class=meta>✓✓ Admin · {{ m.ts[:10] }} · {{ m.ts[11:16] }}</div></div></div>
+{% else %}
+<div class="msg in"><div class=ava>{{ ((user.first_name if user else 'C') or 'C')[:1]|upper }}</div><div><div class=bubble>{{ m.text }}</div><div class=meta>{{ user.first_name if user else 'Customer' }} · {{ m.ts[:10] }} · {{ m.ts[11:16] }}</div></div></div>
 {% endif %}
+{% else %}<div class=empty>No messages recorded for this customer yet.</div>{% endfor %}
+</div>
+<div class=composer>
+<form method=post action="/admin/support/{{ sel }}/reply" enctype="multipart/form-data">
+<label class=cbtn title="Attach a photo, video or file"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m21 12.5-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8L13 5a3.7 3.7 0 0 1 5.2 5.2l-8 8a1.85 1.85 0 0 1-2.6-2.6l7.4-7.4"/></svg><input type=file name=attach hidden onchange="document.getElementById('fname').textContent=this.files[0]?('📎 '+this.files[0].name):''"></label>
+<textarea name=text rows=1 placeholder="Reply to {{ user.first_name if user else 'customer' }}..."></textarea>
+<button class="cbtn send" title="Send"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></svg></button>
+</form>
+<div class=hint id=fname></div>
+<div class=hint>Photos, videos and documents up to 10 MB can be attached. The customer must have started the bot at least once.</div>
+</div>
+{% else %}
+<div class=empty style="padding:70px 26px">Select a conversation from the left<br>to view messages and reply.</div>
+{% endif %}
+</div>
+</div>
+<script>
+function filterThreads(){var q=document.getElementById('q').value.toLowerCase();document.querySelectorAll('#threads .thread').forEach(function(t){t.style.display=t.dataset.name.includes(q)?'':'none'})}
+var cb=document.getElementById('chatbox');if(cb){cb.scrollTop=cb.scrollHeight}
+</script>
 {% endblock %}
