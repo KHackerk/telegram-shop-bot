@@ -37,6 +37,15 @@
 .composer textarea{flex:1;border-radius:999px;padding:13px 20px;margin:0;resize:none;max-height:90px}
 .hint{color:var(--dim);font-size:12.5px;margin:9px 4px 4px}
 .empty{padding:44px 26px;color:var(--dim);text-align:center}
+
+@media(max-width:760px){
+  #threads{max-height:300px;overflow-y:auto}
+  .chatbox{max-height:58vh;padding:10px 10px 14px}
+  .composer{padding:10px}
+  .composer textarea{padding:11px 14px}
+  .sup-head{padding:11px 12px}
+  .sup-head .ava{width:40px;height:40px}
+}
 </style>
 <h1>Support Threads</h1>
 {% with ms = get_flashed_messages() %}{% if ms %}<div class=card style="border-color:#22c55e">{{ ms[0] }}</div>{% endif %}{% endwith %}
