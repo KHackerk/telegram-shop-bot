@@ -7,5 +7,7 @@ input,button{width:100%;padding:12px;margin:8px 0;border-radius:12px;font-size:1
 input{border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:#fff;outline:none}input::placeholder{color:rgba(255,255,255,.4)}input:focus{border-color:rgba(34,197,94,.65)}
 button{background:linear-gradient(135deg,#0da35c,#065f46);color:#fff;border:0;cursor:pointer;font-weight:700;box-shadow:0 10px 26px rgba(6,95,70,.45);transition:all .3s}button:hover{transform:translateY(-2px)}
 p{color:rgba(226,240,231,.6);font-size:13px}
+
+@media(max-width:760px){.card{width:calc(100vw - 32px)!important;max-width:400px;padding:26px 20px!important}input{font-size:16px}button{min-height:46px}}
 </style>
 <form method=post><h2><svg style="width:20px;height:20px;vertical-align:-3px;margin-right:7px;color:#22c55e" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z"/></svg>{{shop}} — Admin Login</h2>{% with m=get_flashed_messages() %}{% if m %}<p>{{m[0]}}</p>{% endif %}{% endwith %}<input type=password name=password placeholder="Admin password"><button>Login</button><p>Password is the ADMIN_PASSWORD set on Render.</p></form>
