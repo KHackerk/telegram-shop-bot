@@ -1312,6 +1312,13 @@ def topup_act(tid, act):
 @app.route("/health")
 def health(): return {"ok": True, "bot": bool(BOT_TOKEN), "shop": SHOP_NAME}
 
+@app.route("/wallpaper.jpg")
+def wallpaper():
+    from flask import send_file
+    r = send_file(os.path.join(os.path.dirname(os.path.abspath(__file__)), "wallpaper.jpg"), mimetype="image/jpeg")
+    r.headers["Cache-Control"] = "public, max-age=86400"
+    return r
+
 @app.route("/bot-status")
 def bot_status():
     # Safe diagnostics: never returns the token itself.
