@@ -1259,10 +1259,15 @@ def report_toggle(rid):
     c.close(); return redirect(url_for("reports"))
 
 def _support_rows(c):
-    return c.execute("""SELECT m.user_id, u.username, u.first_name, COUNT(*) n, MAX(m.ts) last_ts,
+    rows = c.execute("""SELECT m.user_id, u.username, u.first_name, COUNT(*) n, MAX(m.ts) last_ts,
                         (SELECT text FROM chat_messages WHERE user_id=m.user_id ORDER BY id DESC LIMIT 1) last_text
                         FROM chat_messages m LEFT JOIN users u ON u.telegram_id=m.user_id
                         GROUP BY m.user_id, u.username, u.first_name ORDER BY last_ts DESC""").fetchall()
+    out = []
+    for r in rows:
+        d = dict(r); d["last_ts"] = str(d["last_ts"])[:19] if d.get("last_ts") else ""
+        out.append(d)
+    return out
 
 @app.route("/admin/support")
 @login_required
@@ -1276,6 +1281,7 @@ def support_thread(tid):
     c = db()
     user = c.execute("SELECT * FROM users WHERE telegram_id=?", (tid,)).fetchone()
     msgs = c.execute("SELECT * FROM chat_messages WHERE user_id=? ORDER BY id DESC LIMIT 200", (tid,)).fetchall()[::-1]
+    msgs = [dict(x, ts=str(x["ts"])[:19] if x["ts"] else "") for x in msgs]
     rows = _support_rows(c)
     c.close()
     return render_template("support.html", rows=rows, sel=tid, user=user, tid=tid, msgs=msgs, shop=SHOP_NAME)
