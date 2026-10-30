@@ -1258,16 +1258,17 @@ def report_toggle(rid):
     if r: c.execute("UPDATE reports SET status=? WHERE id=?", ("done" if r["status"] == "new" else "new", rid)); c.commit()
     c.close(); return redirect(url_for("reports"))
 
-@app.route("/admin/support")
-@login_required
-def support():
-    c = db()
-    rows = c.execute("""SELECT m.user_id, u.username, u.first_name, COUNT(*) n, MAX(m.ts) last_ts,
+def _support_rows(c):
+    return c.execute("""SELECT m.user_id, u.username, u.first_name, COUNT(*) n, MAX(m.ts) last_ts,
                         (SELECT text FROM chat_messages WHERE user_id=m.user_id ORDER BY id DESC LIMIT 1) last_text
                         FROM chat_messages m LEFT JOIN users u ON u.telegram_id=m.user_id
                         GROUP BY m.user_id, u.username, u.first_name ORDER BY last_ts DESC""").fetchall()
-    c.close()
-    return render_template("support.html", rows=rows, shop=SHOP_NAME)
+
+@app.route("/admin/support")
+@login_required
+def support():
+    c = db(); rows = _support_rows(c); c.close()
+    return render_template("support.html", rows=rows, sel=None, user=None, msgs=[], shop=SHOP_NAME)
 
 @app.route("/admin/support/<int:tid>")
 @login_required
@@ -1275,8 +1276,9 @@ def support_thread(tid):
     c = db()
     user = c.execute("SELECT * FROM users WHERE telegram_id=?", (tid,)).fetchone()
     msgs = c.execute("SELECT * FROM chat_messages WHERE user_id=? ORDER BY id DESC LIMIT 200", (tid,)).fetchall()[::-1]
+    rows = _support_rows(c)
     c.close()
-    return render_template("support_thread.html", user=user, tid=tid, msgs=msgs, shop=SHOP_NAME)
+    return render_template("support.html", rows=rows, sel=tid, user=user, tid=tid, msgs=msgs, shop=SHOP_NAME)
 
 @app.route("/admin/topups/<int:tid>/<act>")
 @login_required
