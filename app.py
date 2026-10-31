@@ -365,6 +365,32 @@ def log_chat(user_id, direction, text):
     except Exception:
         pass
 
+def notify_restock(product_name, product_id, count):
+    """Broadcast a 'back in stock' message to every bot user, in their language.
+    Returns (sent, failed)."""
+    if not bot: return (0, 0)
+    from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+    sent = failed = 0
+    try:
+        c = db(); users = c.execute("SELECT telegram_id, lang FROM users").fetchall(); c.close()
+    except Exception:
+        return (0, 0)
+    for u in users:
+        if (u["lang"] or "en") == "my":
+            text = f"✨ <b>{product_name}</b> Stock ပြန်ရောက်ပါပြီ\n\n📌 ထပ်ဖြည့်ထားသည် {count} Acc"
+            btn = "🛍️ ကုန်ပစ္စည်းများ ဝယ်မည်"
+        else:
+            text = f"✨ <b>{product_name}</b> is back in stock!\n\n📌 Restocked: {count} Acc"
+            btn = "🛍️ Buy now"
+        kb = InlineKeyboardMarkup()
+        kb.add(InlineKeyboardButton(btn, callback_data=f"prod_{product_id}"))
+        try:
+            bot.send_message(u["telegram_id"], text, parse_mode="HTML", reply_markup=kb)
+            log_chat(u["telegram_id"], "out", plain(text)); sent += 1
+        except Exception:
+            failed += 1
+    return (sent, failed)
+
 def plain(html_text):
     import re as _re
     return _re.sub("<[^>]+>", "", html_text or "").strip()
@@ -1060,9 +1086,16 @@ def prod_delete(pid):
 def stock():
     c = db()
     if request.method == "POST":
+        pid = request.form["product_id"]
         lines = [x.strip() for x in request.form["content"].splitlines() if x.strip()]
-        for line in lines: c.execute("INSERT INTO stock_items(product_id,content) VALUES(?,?)", (request.form["product_id"], line))
+        for line in lines: c.execute("INSERT INTO stock_items(product_id,content) VALUES(?,?)", (pid, line))
         c.commit()
+        msg = f"Stock added: {len(lines)} item(s)."
+        if lines and request.form.get("notify"):
+            pr = c.execute("SELECT name FROM products WHERE id=?", (pid,)).fetchone()
+            s, f = notify_restock(pr["name"] if pr else "Product", pid, len(lines))
+            msg += f" Customers notified: {s}" + (f" ({f} unreachable)" if f else "") + "."
+        flash(msg)
     prods = c.execute("SELECT * FROM products").fetchall()
     rows = c.execute("SELECT s.*, p.name FROM stock_items s JOIN products p ON p.id=s.product_id ORDER BY s.id DESC LIMIT 100").fetchall(); c.close()
     return render_template("stock.html", rows=rows, prods=prods, shop=SHOP_NAME)
