@@ -481,6 +481,21 @@ if BOT_TOKEN:
             c.close(); main_menu(call); return
         if data in ("invite", "saved"):
             c.close(); main_menu(call); return
+        if data == "setlogo_cancel":
+            set_setting(f"logo_pending_{uid}", ""); c.close()
+            show("❌ Logo ပြောင်းတာ ပယ်ဖျက်လိုက်ပါပြီ", back); return
+        if data.startswith("setlogo_"):
+            if uid != ADMIN_TG_ID:
+                bot.answer_callback_query(call.id, "Admin only"); c.close(); return
+            pend = get_setting(f"logo_pending_{uid}", "")
+            if not pend:
+                bot.answer_callback_query(call.id, "Send an animated emoji to the bot first"); c.close(); return
+            catid = int(data.split("_")[1])
+            c.execute("UPDATE categories SET logo_id=? WHERE id=?", (pend, catid))
+            nm = c.execute("SELECT name FROM categories WHERE id=?", (catid,)).fetchone()
+            c.commit(); c.close()
+            set_setting(f"logo_pending_{uid}", "")
+            show(f"✅ <b>{hesc(nm['name'] if nm else '')}</b> category ရဲ့ logo ကို ပြောင်းပြီးပါပြီ — Shop မှာ အသစ် ပေါ်နေပါပြီ", back); return
         if data in ("support", "help"):
             kb = InlineKeyboardMarkup()
             kb.add(InlineKeyboardButton(tr(uid, 'support_btn'), url="https://t.me/Khant_2001"))
@@ -778,6 +793,27 @@ if BOT_TOKEN:
         log_chat(msg.from_user.id, "out", plain(txt))
         kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton(tr(msg.from_user.id, 'home'), callback_data="home"))
         bot.send_message(msg.chat.id, txt, reply_markup=kb)
+
+    def _has_custom_emoji(m):
+        if not (m.from_user and m.from_user.id == ADMIN_TG_ID): return False
+        if getattr(m, "sticker", None) is not None and getattr(m.sticker, "custom_emoji_id", None): return True
+        return bool(m.entities and any(e.type == "custom_emoji" for e in m.entities))
+
+    @bot.message_handler(func=_has_custom_emoji, content_types=["text", "sticker"])
+    def admin_logo_pick(msg):
+        cid = None
+        if getattr(msg, "sticker", None) is not None and getattr(msg.sticker, "custom_emoji_id", None):
+            cid = msg.sticker.custom_emoji_id
+        elif msg.entities:
+            for e in msg.entities:
+                if e.type == "custom_emoji": cid = e.custom_emoji_id; break
+        if not cid: return
+        set_setting(f"logo_pending_{ADMIN_TG_ID}", str(cid))
+        c = db(); cats = c.execute("SELECT id, name FROM categories ORDER BY sort, id").fetchall(); c.close()
+        kb = InlineKeyboardMarkup(row_width=2)
+        kb.add(*[InlineKeyboardButton(r["name"], callback_data=f"setlogo_{r['id']}") for r in cats])
+        kb.add(InlineKeyboardButton("❌ Cancel", callback_data="setlogo_cancel"))
+        bot.send_message(msg.chat.id, "🎨 ဒီ animated emoji ကို ဘယ် category ရဲ့ logo အဖြစ် သတ်မှတ်မလဲ? Category ကို ရွေးပါ:", reply_markup=kb)
 
     @bot.message_handler(func=lambda m: bool(m.text) and not m.text.startswith("/"), content_types=["text"])
     def dep_text(msg):
@@ -1289,7 +1325,7 @@ def bot_ui():
     pmethods = c.execute("SELECT * FROM payment_methods ORDER BY sort,id").fetchall(); c.close()
     logos = {r["id"]: cat_logo(r) for r in cats}
     brands = {r["id"]: (r["name"] in BRAND_LOGOS) for r in cats}
-    return render_template("bot_ui.html", cats=cats, logos=logos, brands=brands, logo_options=LOGO_OPTIONS, pmethods=pmethods,
+    return render_template("bot_ui.html", cats=cats, logos=logos, brands=brands, logo_options=LOGO_OPTIONS, logo_ids=[lid for _, lid in LOGO_OPTIONS], pmethods=pmethods,
                            cat_cols=get_setting("cat_cols", "2"), prod_cols=get_setting("prod_cols", "1"),
                            shop_title=get_setting("shop_title", ""), shop_subtitle=get_setting("shop_subtitle", ""),
                            show_counts=get_setting("show_counts", "1"), shop=SHOP_NAME)
