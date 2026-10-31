@@ -1036,7 +1036,13 @@ def _delete_categories(c, ids):
 def categories():
     c = db()
     if request.method == "POST":
-        if request.form.get("bulk_delete"):
+        if request.form.get("bulk_vis") in ("hide", "show"):
+            ids = [int(x) for x in request.form.getlist("sel") if x.isdigit()]
+            if ids:
+                ph = ",".join("?" * len(ids))
+                c.execute(f"UPDATE categories SET hidden=? WHERE id IN ({ph})", [1 if request.form["bulk_vis"] == "hide" else 0] + ids); c.commit()
+            flash(f"{len(ids)} categor{'ies' if len(ids) != 1 else 'y'} {'hidden from' if request.form['bulk_vis'] == 'hide' else 'shown in'} the bot.")
+        elif request.form.get("bulk_delete"):
             n = _delete_categories(c, request.form.getlist("sel")); c.commit()
             flash(f"Deleted {n} categor{'y' if n == 1 else 'ies'} (with their products and stock).")
         else:
@@ -1229,6 +1235,16 @@ def bot_ui():
             flash("Design settings saved — the bot uses them immediately.")
         elif request.form.get("section") == "cats":
             c = db()
+            bulk = request.form.get("bulk")
+            if bulk in ("hide", "show"):
+                ids = [int(x) for x in request.form.getlist("sel") if x.isdigit()]
+                if ids:
+                    ph = ",".join("?" * len(ids))
+                    c.execute(f"UPDATE categories SET hidden=? WHERE id IN ({ph})", [1 if bulk == "hide" else 0] + ids)
+                    c.commit()
+                c.close()
+                flash(f"{len(ids)} categor{'ies' if len(ids) != 1 else 'y'} {'hidden from' if bulk == 'hide' else 'shown in'} the bot." if ids else "Tick the Select box on at least one category first.")
+                return redirect(url_for("bot_ui"))
             for r in c.execute("SELECT id FROM categories").fetchall():
                 cid = r["id"]
                 nm = request.form.get(f"cat_{cid}_name", "").strip()
