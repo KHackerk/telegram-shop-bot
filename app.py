@@ -337,12 +337,57 @@ STRINGS = {
  "dep_approved": "✅ <b>Deposit အတည်ပြုပြီးပါပြီ!</b>\n\nပမာဏ: <b>{amt}</b>\nလက်ကျန် အသစ်: <b>{bal}</b>\n\nကျေးဇူးတင်ပါတယ်! 🙏",
  "bal_adj": "💰 <b>လက်ကျန်ငွေ ပြင်ဆင်ချက်</b>\n\nဆိုင်မှ သင့်လက်ကျန်ငွေကို <b>{amt}</b> ပြင်ဆင်လိုက်ပါတယ်။\nလက်ကျန် အသစ်: <b>{bal}</b>",
  "dep_rejected": "❌ <b>Deposit အတည်မပြုပါ</b>\n\nပမာဏ: <b>{amt}</b>\n\nငွေလွှဲမှုနဲ့ screenshot ကို စစ်ပြီး ပြန်ကြိုးစားပါ — သို့မဟုတ် Customer Support ကို ဆက်သွယ်ပါ။",
-}}
+},
+"zh": {
+ "menu_shop": "🛍️ 商店", "menu_orders": "📦 我的订单", "menu_wallet": "💳 充值", "menu_balance": "💰 查询余额",
+ "menu_new": "📣 最新动态", "menu_support": "💬 客服支持", "menu_lang": "🌐 语言",
+ "tier": "等级", "balance": "余额", "total_spent": "累计消费", "to_silver": "距离 Silver 还差 {x}",
+ "orders_line": "订单: 待处理 {p} · 已交付 {d} · 已确认 {cf}", "invite_link": "您的邀请链接",
+ "back": "⬅️ 返回", "cancel": "❌ 取消", "home": "🏠 主菜单",
+ "wallet_body": "<b>💳 充值</b>\n\n{balance_label}: <b>{bal}</b>\n\n<b>充值步骤:</b>\n1️⃣ 点击下方 ➕ 充值\n2️⃣ 输入金额 (MMK)\n3️⃣ 选择付款方式并转账\n4️⃣ 发送付款截图\n\n✅ 管理员审核通过后,金额将存入您的余额。",
+ "balance_body": "<b>💰 我的余额</b>\n\n{balance_label}: <b>{bal}</b>\n{total_spent_label}: {spent}",
+ "deposit_btn": "➕ 充值",
+ "dep_prompt": "<b>💰 充值</b>\n\n请输入充值金额(MMK)——例如 <b>5000</b> 或 <b>50000</b>。",
+ "dep_choose": "<b>💰 充值 {amt}</b>\n\n请选择付款方式:",
+ "dep_no_methods": "⚠️ 暂无可用的付款方式,请联系客服。",
+ "dep_method_gone": "⚠️ 该付款方式已不可用。",
+ "dep_transfer": "转账金额: <b>{amt}</b>\n\n转账完成后,请点击 ✅ 我已转账。",
+ "dep_transferred_btn": "✅ 我已转账", "dep_methods_btn": "⬅️ 付款方式",
+ "dep_send_shot": "📸 现在请在此聊天中<b>发送您的付款截图</b>(照片)。",
+ "dep_start_again": "⚠️ 请从 充值 → Deposit 重新开始。",
+ "dep_invalid": "⚠️ 请输入有效的金额,例如 5000",
+ "dep_shot_remind": "📸 请以<b>照片</b>形式发送截图(不要用文字)。",
+ "dep_use_buttons": "👆 请点击上方按钮继续充值——或打开 💳 充值 重新开始。",
+ "dep_received": "✅ <b>已收到充值请求!</b>\n\n金额: <b>{amt}</b>\n方式: <b>{method}</b>\n\n管理员将审核您的截图并为您充值。您可以随时通过 💰 查询余额 查看。",
+ "dep_photo_fail": "⚠️ 无法读取该照片——请重新发送截图。",
+ "dep_cancelled": "❌ 充值已取消。",
+ "support_body": "<b>💬 客服支持</b>\n\n订单或充值需要帮助?点击下方按钮直接联系客服——我们通常会很快回复。",
+ "support_btn": "💬 联系客服",
+ "lang_title": "<b>🌐 Language / ဘာသာစကား / 语言</b>\n\nChoose your language / 请选择语言:",
+ "orders_title": "<b>📦 我的订单</b>", "orders_empty": "暂无订单。",
+ "new_title": "<b>📣 最新库存动态</b>", "new_empty": "暂无新库存——请稍后再来查看。", "stock_word": "库存",
+ "out_of_stock": "❌ 缺货", "oos_alert": "该产品目前缺货——请稍后再来查看。",
+ "confirm_body": "🛒 <b>确认购买</b>\n\n产品: <b>{name}</b>\n价格: <b>{price}</b>\n您的余额: {bal}\n\n将从您的余额中扣除 {price}。确定要购买吗?",
+ "confirm_btn": "✅ 确认", "wait_text": "⏳ 请稍候——正在确认您的订单…",
+ "delivery_note": "\n\n⚠️ <b>注意:</b> 请截屏保存此账号,或复制并保存到您的笔记中。购买后请立即登录。\n\n如果登录遇到问题,请点击下方的客服(申诉)按钮提交申诉。",
+ "appeal_btn": "📩 向客服申诉",
+ "appeal_prompt": "✍️ 请发送消息说明您遇到的问题。客服上线后会尽快回复。",
+ "appeal_sent": "✅ 您的消息已发送给客服。客服上线后会尽快回复。",
+ "buy_now": "✅ 立即购买", "save_btn": "❤️ 保存", "price_label": "价格", "stock_label": "库存",
+ "order_done": "订单 #{oid} 已完成", "products_title": "产品",
+ "no_balance": "❌ 余额不足。\n您有 {bal},需要 {price}。\n请从 💳 充值 进行充值——管理员会审核。",
+ "order_pending": "✅ <b>订单 #{oid} 已创建(待处理)</b>\n管理员会尽快交付。请在我的订单中查看。",
+ "shop_choose": "请选择分类:",
+ "dep_approved": "✅ <b>充值已通过!</b>\n\n金额: <b>{amt}</b>\n新余额: <b>{bal}</b>\n\n谢谢! 🙏",
+ "bal_adj": "💰 <b>余额调整</b>\n\n商店已调整您的余额 <b>{amt}</b>。\n新余额: <b>{bal}</b>",
+ "dep_rejected": "❌ <b>充值未通过</b>\n\n金额: <b>{amt}</b>\n\n请检查您的转账和截图后重试——或联系客服支持。",
+}
+}
 
 def ulang(tid):
     try:
         c = db(); r = c.execute("SELECT lang FROM users WHERE telegram_id=?", (tid,)).fetchone(); c.close()
-        return (r["lang"] if r and r["lang"] in ("en", "my") else "en")
+        return (r["lang"] if r and r["lang"] in ("en", "my", "zh") else "en")
     except Exception:
         return "en"
 
@@ -376,9 +421,13 @@ def notify_restock(product_name, product_id, count):
     except Exception:
         return (0, 0)
     for u in users:
-        if (u["lang"] or "en") == "my":
+        lgv = u["lang"] or "en"
+        if lgv == "my":
             text = f"✨ <b>{product_name}</b> Stock ပြန်ရောက်ပါပြီ\n\n📌 ထပ်ဖြည့်ထားသည် {count} Acc"
             btn = "🛍️ ကုန်ပစ္စည်းများ ဝယ်မည်"
+        elif lgv == "zh":
+            text = f"✨ <b>{product_name}</b> 已补货!\n\n📌 新增库存: {count} 个"
+            btn = "🛍️ 立即购买"
         else:
             text = f"✨ <b>{product_name}</b> is back in stock!\n\n📌 Restocked: {count} Acc"
             btn = "🛍️ Buy now"
@@ -505,11 +554,13 @@ if BOT_TOKEN:
             kb = InlineKeyboardMarkup(row_width=1)
             kb.add(InlineKeyboardButton("🇲🇲 မြန်မာ (Myanmar)", callback_data="lang_my"))
             kb.add(InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"))
+            kb.add(InlineKeyboardButton("🇨🇳 中文 (Chinese)", callback_data="lang_zh"))
             kb.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
             show(tr(uid, 'lang_title'), kb); c.close(); return
-        if data in ("lang_my", "lang_en"):
-            setlang(uid, "my" if data == "lang_my" else "en")
-            bot.answer_callback_query(call.id, "ဘာသာစကား ပြောင်းပြီးပါပြီ ✓" if data == "lang_my" else "Language changed ✓")
+        if data in ("lang_my", "lang_en", "lang_zh"):
+            _nl = {"lang_my": "my", "lang_en": "en", "lang_zh": "zh"}[data]
+            setlang(uid, _nl)
+            bot.answer_callback_query(call.id, {"my": "ဘာသာစကား ပြောင်းပြီးပါပြီ ✓", "zh": "语言已更改 ✓"}.get(_nl, "Language changed ✓"))
             c.close(); main_menu(call); return
         if data == "shop":
             cats = c.execute("SELECT cat.*, (SELECT COUNT(*) FROM stock_items s JOIN products p ON p.id=s.product_id WHERE p.category_id=cat.id AND s.is_sold=0) stock FROM categories cat WHERE COALESCE(cat.hidden,0)=0 ORDER BY sort").fetchall()
@@ -751,6 +802,7 @@ if BOT_TOKEN:
             kb = InlineKeyboardMarkup(row_width=1)
             kb.add(InlineKeyboardButton("🇲🇲 မြန်မာ (Myanmar)", callback_data="lang_my"))
             kb.add(InlineKeyboardButton("🇬🇧 English", callback_data="lang_en"))
+            kb.add(InlineKeyboardButton("🇨🇳 中文 (Chinese)", callback_data="lang_zh"))
             kb.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
             txt = tr(uid, 'lang_title')
             log_chat(uid, "out", plain(txt)); bot.send_message(chat_id, txt, reply_markup=kb)
@@ -1195,7 +1247,7 @@ def balance(tid):
     log_event("balance_adjust", f"user={tid} delta={delta} new={new}")
     if bot and delta != 0:
         try:
-            lang = u["lang"] if u["lang"] in ("en", "my") else "en"
+            lang = u["lang"] if u["lang"] in ("en", "my", "zh") else "en"
             signed = ("+" if delta > 0 else "−") + money(abs(delta))
             txt = STRINGS[lang]["bal_adj"].format(amt=signed, bal=money(new))
             bot.send_message(tid, txt); log_chat(tid, "out", plain(txt))
