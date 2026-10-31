@@ -490,12 +490,13 @@ if BOT_TOKEN:
         c.close()
         uid = u["telegram_id"]
         username = f"@{u['username']}" if u["username"] else "-"
-        rows = [("User ID", str(u["telegram_id"])),
-                ("Username", username),
-                (tr(uid, 'balance'), money(u["balance_cents"])),
-                (tr(uid, 'total_spent'), money(u["total_spent_cents"])),
-                ("Orders", f"P: {counts['pending']} · D: {counts['delivered']} · C: {counts['confirmed']}")]
-        text = cell_table(hesc(u["first_name"] or "") or username, rows)
+        name = hesc(u["first_name"] or "") or username
+        text = (f"👤 <b>{name}</b>\n\n"
+                f"🆔 User ID: <code>{u['telegram_id']}</code>\n"
+                f"👤 Username: {username}\n"
+                f"💰 {tr(uid, 'balance')}: <b>{money(u['balance_cents'])}</b>\n"
+                f"🧾 {tr(uid, 'total_spent')}: {money(u['total_spent_cents'])}\n"
+                f"📦 " + tr(uid, 'orders_line').format(p=counts['pending'], d=counts['delivered'], cf=counts['confirmed']))
         kb = ReplyKeyboardMarkup(resize_keyboard=True, is_persistent=True, row_width=2)
         kb.add(KeyboardButton(tr(uid, 'menu_shop')), KeyboardButton(tr(uid, 'menu_orders')))
         kb.add(KeyboardButton(tr(uid, 'menu_wallet')), KeyboardButton(tr(uid, 'menu_balance')))
@@ -777,7 +778,9 @@ if BOT_TOKEN:
             kb.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
             bal = money(u['balance_cents']) if u else money(0)
             spent = money(u['total_spent_cents']) if u else money(0)
-            txt = cell_table("💰 " + tr(uid, 'balance'), [(tr(uid, 'balance'), bal), (tr(uid, 'total_spent'), spent)])
+            txt = (f"<b>💰 {tr(uid, 'balance')}</b>\n\n"
+                   f"{tr(uid, 'balance')}: <b>{bal}</b>\n"
+                   f"{tr(uid, 'total_spent')}: {spent}")
             log_chat(uid, "out", plain(txt)); bot.send_message(chat_id, txt, reply_markup=kb)
         elif screen == "orders":
             rows = c.execute("SELECT o.*, p.name FROM orders o LEFT JOIN products p ON p.id=o.product_id WHERE o.user_id=? ORDER BY o.id DESC LIMIT 20", (uid,)).fetchall()
