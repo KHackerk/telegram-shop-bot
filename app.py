@@ -210,6 +210,11 @@ def logo_thumb_bytes(cid):
     _LOGO_THUMB_CACHE[cid] = raw
     return raw
 
+def icon_html(slot, default):
+    """Profile-card line icon: a custom emoji if the admin assigned one, else the default emoji."""
+    cid = get_setting(f"icon_{slot}", "")
+    return f'<tg-emoji emoji-id="{cid}">{default}</tg-emoji>' if cid else default
+
 def money(cents): return f"{cents//100:,} MMK"
 def tier(total_spent_cents):
     if total_spent_cents >= 50000000: return "Gold"
@@ -491,12 +496,12 @@ if BOT_TOKEN:
         uid = u["telegram_id"]
         username = f"@{u['username']}" if u["username"] else "-"
         name = hesc(u["first_name"] or "") or username
-        text = (f"👤 <b>{name}</b>\n\n"
-                f"🆔 User ID: <code>{u['telegram_id']}</code>\n"
-                f"👤 Username: {username}\n"
-                f"💰 {tr(uid, 'balance')}: <b>{money(u['balance_cents'])}</b>\n"
-                f"🧾 {tr(uid, 'total_spent')}: {money(u['total_spent_cents'])}\n"
-                f"📦 " + tr(uid, 'orders_line').format(p=counts['pending'], d=counts['delivered'], cf=counts['confirmed']))
+        text = (f"{icon_html('profile', '👤')} <b>{name}</b>\n\n"
+                f"{icon_html('userid', '🆔')} User ID: <code>{u['telegram_id']}</code>\n"
+                f"{icon_html('username', '👤')} Username: {username}\n"
+                f"{icon_html('balance', '💰')} {tr(uid, 'balance')}: <b>{money(u['balance_cents'])}</b>\n"
+                f"{icon_html('spent', '🧾')} {tr(uid, 'total_spent')}: {money(u['total_spent_cents'])}\n"
+                f"{icon_html('orders', '📦')} " + tr(uid, 'orders_line').format(p=counts['pending'], d=counts['delivered'], cf=counts['confirmed']))
         kb = ReplyKeyboardMarkup(resize_keyboard=True, is_persistent=True, row_width=2)
         kb.add(KeyboardButton(tr(uid, 'menu_shop')), KeyboardButton(tr(uid, 'menu_orders')))
         kb.add(KeyboardButton(tr(uid, 'menu_wallet')), KeyboardButton(tr(uid, 'menu_balance')))
@@ -518,6 +523,95 @@ if BOT_TOKEN:
     @bot.message_handler(commands=["menu"])
     def menu(msg): main_menu(msg)
 
+    def adm_back_kb():
+        kb = InlineKeyboardMarkup(); kb.add(InlineKeyboardButton("⬅️ Dashboard", callback_data="adm_home")); return kb
+
+    def adm_home():
+        c = db()
+        n_users = c.execute("SELECT COUNT(*) n FROM users").fetchone()["n"]
+        n_top = c.execute("SELECT COUNT(*) n FROM topups WHERE status='pending'").fetchone()["n"]
+        n_ord = c.execute("SELECT COUNT(*) n FROM orders WHERE status='pending'").fetchone()["n"]
+        rev = c.execute("SELECT COALESCE(SUM(total_spent_cents),0) s FROM users").fetchone()["s"]
+        n_prod = c.execute("SELECT COUNT(*) n FROM products WHERE active=1").fetchone()["n"]
+        n_stock = c.execute("SELECT COUNT(*) n FROM stock_items WHERE is_sold=0").fetchone()["n"]
+        c.close()
+        txt = (f"🛠 <b>Admin Dashboard</b>\n\n"
+               f"👥 Users: <b>{n_users}</b>\n"
+               f"💳 Pending top-ups: <b>{n_top}</b>\n"
+               f"📦 Pending orders: <b>{n_ord}</b>\n"
+               f"🛍 Products: <b>{n_prod}</b> · Stock: <b>{n_stock}</b>\n"
+               f"💰 Total customer spending: <b>{money(rev)}</b>")
+        kb = InlineKeyboardMarkup(row_width=2)
+        kb.add(InlineKeyboardButton(f"💳 Top-ups ({n_top})", callback_data="adm_topups"),
+               InlineKeyboardButton(f"📦 Orders ({n_ord})", callback_data="adm_orders"))
+        kb.add(InlineKeyboardButton("👥 Users", callback_data="adm_users"),
+               InlineKeyboardButton("🎨 Emojis & Logos", callback_data="adm_design"))
+        kb.add(InlineKeyboardButton("🌐 Web admin", url="https://telegram-shop-bot-t2ow.onrender.com/login"),
+               InlineKeyboardButton("🔄 Refresh", callback_data="adm_home"))
+        return txt, kb
+
+    def adm_topups_screen():
+        c = db()
+        rows = c.execute("""SELECT t.*, u.username, u.first_name FROM topups t
+                            LEFT JOIN users u ON u.telegram_id=t.user_id
+                            WHERE t.status='pending' ORDER BY t.id LIMIT 8""").fetchall(); c.close()
+        if not rows: return "💳 Pending top-up မရှိပါဘူး ✅", adm_back_kb()
+        txt = "💳 <b>Pending top-ups</b>\n\n" + "\n\n".join(
+            f"#{r['id']} · {hesc(r['first_name'] or '')} (@{hesc(r['username'] or '-')})\n💰 <b>{money(r['amount_cents'])}</b> · {hesc(r['method_name'] or r['method'] or '-')}" for r in rows)
+        kb = InlineKeyboardMarkup(row_width=2)
+        for r in rows:
+            kb.add(InlineKeyboardButton(f"✅ #{r['id']} Approve", callback_data=f"adm_top_ok_{r['id']}"),
+                   InlineKeyboardButton(f"❌ #{r['id']} Reject", callback_data=f"adm_top_no_{r['id']}"))
+            kb.add(InlineKeyboardButton(f"🖼 #{r['id']} Screenshot", callback_data=f"adm_top_img_{r['id']}"))
+        kb.add(InlineKeyboardButton("⬅️ Dashboard", callback_data="adm_home"))
+        return txt, kb
+
+    def adm_orders_screen():
+        c = db()
+        rows = c.execute("""SELECT o.*, p.name, u.username, u.first_name FROM orders o
+                            LEFT JOIN products p ON p.id=o.product_id
+                            LEFT JOIN users u ON u.telegram_id=o.user_id
+                            WHERE o.status='pending' ORDER BY o.id LIMIT 8""").fetchall(); c.close()
+        if not rows: return "📦 Pending order မရှိပါဘူး ✅", adm_back_kb()
+        txt = "📦 <b>Pending orders</b> — deliver လုပ်ရန် order ကို နှိပ်ပါ\n\n" + "\n\n".join(
+            f"#{r['id']} · {hesc(r['name'] or 'Product')} · <b>{money(r['price_cents'])}</b>\n👤 {hesc(r['first_name'] or '')} (@{hesc(r['username'] or '-')})" for r in rows)
+        kb = InlineKeyboardMarkup(row_width=1)
+        for r in rows:
+            kb.add(InlineKeyboardButton(f"🚀 Deliver #{r['id']} · {r['name'] or ''}", callback_data=f"adm_ord_{r['id']}"))
+        kb.add(InlineKeyboardButton("⬅️ Dashboard", callback_data="adm_home"))
+        return txt, kb
+
+    def adm_users_screen():
+        c = db()
+        rows = c.execute("SELECT * FROM users ORDER BY id DESC LIMIT 8").fetchall(); c.close()
+        if not rows: return "👥 User မရှိသေးပါဘူး", adm_back_kb()
+        txt = "👥 <b>Latest users</b> — balance ပြင်ရန် user ကို နှိပ်ပါ\n\n" + "\n".join(
+            f"• {hesc(r['first_name'] or '')} (@{hesc(r['username'] or '-')}) — <b>{money(r['balance_cents'])}</b>" for r in rows)
+        kb = InlineKeyboardMarkup(row_width=1)
+        for r in rows:
+            kb.add(InlineKeyboardButton(f"💰 {r['first_name'] or r['telegram_id']} · {money(r['balance_cents'])}", callback_data=f"adm_usr_{r['telegram_id']}"))
+        kb.add(InlineKeyboardButton("⬅️ Dashboard", callback_data="adm_home"))
+        return txt, kb
+
+    def adm_design_screen():
+        slots = [("profile", "👤 Profile name"), ("userid", "🆔 User ID"), ("username", "👤 Username"),
+                 ("balance", "💰 Balance"), ("spent", "🧾 Total spent"), ("orders", "📦 Orders")]
+        lines = "\n".join(f"• {label}: {'✅ custom emoji' if get_setting(f'icon_{k}', '') else 'default'}" for k, label in slots)
+        txt = ("🎨 <b>Emojis & Logos</b>\n\n"
+               "Profile card icons:\n" + lines + "\n\n"
+               "ပြောင်းနည်း: သုံးချင်တဲ့ animated emoji ကို bot ဆီ ပို့လိုက်ပါ — ပြီးရင် နေရာ ရွေးပေးရုံပါပဲ (Profile icon / Category logo)။")
+        kb = InlineKeyboardMarkup(row_width=1)
+        kb.add(InlineKeyboardButton("♻️ Reset profile icons to default", callback_data="adm_icons_reset"))
+        kb.add(InlineKeyboardButton("⬅️ Dashboard", callback_data="adm_home"))
+        return txt, kb
+
+    @bot.message_handler(commands=["admin"])
+    def admin_cmd(msg):
+        if msg.from_user.id != ADMIN_TG_ID:
+            bot.send_message(msg.chat.id, "⛔ Admin only."); return
+        txt, kb = adm_home()
+        bot.send_message(msg.chat.id, txt, reply_markup=kb, parse_mode="HTML")
+
     @bot.callback_query_handler(func=lambda c: True)
     def cb(call):
         c = db(); data = call.data
@@ -527,10 +621,102 @@ if BOT_TOKEN:
             bot.edit_message_text(text, call.message.chat.id, call.message.message_id, reply_markup=kb, parse_mode="HTML")
         uid = call.from_user.id
         back = InlineKeyboardMarkup(); back.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
+        if data.startswith("adm_"):
+            if uid != ADMIN_TG_ID:
+                bot.answer_callback_query(call.id, "Admin only"); c.close(); return
+            if data == "adm_home":
+                txt, kb = adm_home(); c.close(); show(txt, kb); return
+            if data == "adm_topups":
+                txt, kb = adm_topups_screen(); c.close(); show(txt, kb); return
+            if data == "adm_orders":
+                txt, kb = adm_orders_screen(); c.close(); show(txt, kb); return
+            if data == "adm_users":
+                txt, kb = adm_users_screen(); c.close(); show(txt, kb); return
+            if data == "adm_design":
+                txt, kb = adm_design_screen(); c.close(); show(txt, kb); return
+            if data == "adm_icons_reset":
+                for _s in ("profile", "userid", "username", "balance", "spent", "orders"): set_setting(f"icon_{_s}", "")
+                c.close(); txt, kb = adm_design_screen(); show("♻️ Profile icons အားလုံး default ပြန်ဖြစ်ပါပြီ\n\n" + txt, kb); return
+            if data.startswith("adm_top_img_"):
+                t = c.execute("SELECT screenshot FROM topups WHERE id=?", (int(data[12:]),)).fetchone(); c.close()
+                if t and t["screenshot"]:
+                    import io as _io
+                    bot.send_photo(call.message.chat.id, _io.BytesIO(t["screenshot"]), caption="🖼 Top-up screenshot")
+                else:
+                    bot.answer_callback_query(call.id, "No screenshot stored")
+                return
+            if data.startswith("adm_top_ok_") or data.startswith("adm_top_no_"):
+                act = "approve" if data.startswith("adm_top_ok_") else "reject"
+                top_id = int(data.rsplit("_", 1)[1])
+                t = c.execute("SELECT * FROM topups WHERE id=?", (top_id,)).fetchone()
+                if t and t["status"] == "pending":
+                    if act == "approve":
+                        c.execute("UPDATE users SET balance_cents=balance_cents+? WHERE telegram_id=?", (t["amount_cents"], t["user_id"]))
+                        c.execute("UPDATE topups SET status='approved' WHERE id=?", (top_id,))
+                    else:
+                        c.execute("UPDATE topups SET status='rejected' WHERE id=?", (top_id,))
+                    c.commit()
+                    try:
+                        if act == "approve":
+                            u2 = c.execute("SELECT balance_cents FROM users WHERE telegram_id=?", (t["user_id"],)).fetchone()
+                            _msg = tr(t["user_id"], 'dep_approved').format(amt=money(t["amount_cents"]), bal=money(u2["balance_cents"]) if u2 else money(0))
+                        else:
+                            _msg = tr(t["user_id"], 'dep_rejected').format(amt=money(t["amount_cents"]))
+                        bot.send_message(t["user_id"], _msg); log_chat(t["user_id"], "out", plain(_msg))
+                    except Exception:
+                        pass
+                    bot.answer_callback_query(call.id, "✅ Approved" if act == "approve" else "❌ Rejected")
+                else:
+                    bot.answer_callback_query(call.id, "Already handled")
+                c.close(); txt, kb = adm_topups_screen(); show(txt, kb); return
+            if data.startswith("adm_ord_"):
+                oid = int(data[8:])
+                o = c.execute("SELECT o.*, p.name FROM orders o LEFT JOIN products p ON p.id=o.product_id WHERE o.id=? AND o.status='pending'", (oid,)).fetchone(); c.close()
+                if not o:
+                    bot.answer_callback_query(call.id, "Order not pending"); txt, kb = adm_orders_screen(); show(txt, kb); return
+                tset(uid, "deliver", 0, oid)
+                bot.send_message(call.message.chat.id, f"🚀 Order #{oid} ({hesc(o['name'] or 'Product')}) အတွက် delivery content ကို ဒီ chat မှာ စာပို့လိုက်ပါ — ဝယ်သူဆီ ချက်ချင်း ပို့ပေးပါမယ်။ (မပို့ချင်ရင် /admin ပြန်ဖွင့်ပါ)")
+                return
+            if data.startswith("adm_usr_"):
+                target = int(data[8:])
+                u3 = c.execute("SELECT * FROM users WHERE telegram_id=?", (target,)).fetchone(); c.close()
+                if not u3:
+                    bot.answer_callback_query(call.id, "User not found"); return
+                tset(uid, "baladj", 0, target)
+                bot.send_message(call.message.chat.id, f"💰 {hesc(u3['first_name'] or '')} (@{hesc(u3['username'] or '-')}) — လက်ရှိ balance: <b>{money(u3['balance_cents'])}</b>\n\nပြင်မယ့် ပမာဏကို ပို့ပါ: ပေါင်းရန် <b>+5000</b> / နှုတ်ရန် <b>-2000</b> (MMK)", parse_mode="HTML")
+                return
+            c.close(); return
         if data == "home":
             c.close(); main_menu(call); return
         if data in ("invite", "saved"):
             c.close(); main_menu(call); return
+        if data == "pick_logo":
+            if uid != ADMIN_TG_ID: bot.answer_callback_query(call.id, "Admin only"); c.close(); return
+            cats = c.execute("SELECT id, name FROM categories ORDER BY sort, id").fetchall(); c.close()
+            kb = InlineKeyboardMarkup(row_width=2)
+            kb.add(*[InlineKeyboardButton(r["name"], callback_data=f"setlogo_{r['id']}") for r in cats])
+            kb.add(InlineKeyboardButton("❌ Cancel", callback_data="setlogo_cancel"))
+            show("🖼 ဘယ် category ရဲ့ logo အဖြစ် သတ်မှတ်မလဲ?", kb); return
+        if data == "pick_icon":
+            if uid != ADMIN_TG_ID: bot.answer_callback_query(call.id, "Admin only"); c.close(); return
+            c.close()
+            kb = InlineKeyboardMarkup(row_width=2)
+            kb.add(InlineKeyboardButton("👤 Profile name", callback_data="seticon_profile"),
+                   InlineKeyboardButton("🆔 User ID", callback_data="seticon_userid"),
+                   InlineKeyboardButton("👤 Username", callback_data="seticon_username"),
+                   InlineKeyboardButton("💰 Balance", callback_data="seticon_balance"),
+                   InlineKeyboardButton("🧾 Total spent", callback_data="seticon_spent"),
+                   InlineKeyboardButton("📦 Orders", callback_data="seticon_orders"))
+            kb.add(InlineKeyboardButton("❌ Cancel", callback_data="setlogo_cancel"))
+            show("🎨 Profile card ရဲ့ ဘယ် icon နေရာမှာ သုံးမလဲ?", kb); return
+        if data.startswith("seticon_"):
+            if uid != ADMIN_TG_ID: bot.answer_callback_query(call.id, "Admin only"); c.close(); return
+            pend = get_setting(f"logo_pending_{uid}", "")
+            if not pend: bot.answer_callback_query(call.id, "Send an animated emoji to the bot first"); c.close(); return
+            slot = data.split("_", 1)[1]
+            if slot not in ("profile", "userid", "username", "balance", "spent", "orders"): c.close(); return
+            set_setting(f"icon_{slot}", pend); set_setting(f"logo_pending_{uid}", ""); c.close()
+            show(f"✅ Profile card ရဲ့ <b>{slot}</b> icon ကို ပြောင်းပြီးပါပြီ — /start မှာ အသစ် ပေါ်နေပါပြီ", back); return
         if data == "setlogo_cancel":
             set_setting(f"logo_pending_{uid}", ""); c.close()
             show("❌ Logo ပြောင်းတာ ပယ်ဖျက်လိုက်ပါပြီ", back); return
@@ -778,7 +964,7 @@ if BOT_TOKEN:
             kb.add(InlineKeyboardButton(tr(uid, 'back'), callback_data="home"))
             bal = money(u['balance_cents']) if u else money(0)
             spent = money(u['total_spent_cents']) if u else money(0)
-            txt = (f"<b>💰 {tr(uid, 'balance')}</b>\n\n"
+            txt = (f"<b>{icon_html('balance', '💰')} {tr(uid, 'balance')}</b>\n\n"
                    f"{tr(uid, 'balance')}: <b>{bal}</b>\n"
                    f"{tr(uid, 'total_spent')}: {spent}")
             log_chat(uid, "out", plain(txt)); bot.send_message(chat_id, txt, reply_markup=kb)
@@ -864,11 +1050,11 @@ if BOT_TOKEN:
                 if e.type == "custom_emoji": cid = e.custom_emoji_id; break
         if not cid: return
         set_setting(f"logo_pending_{ADMIN_TG_ID}", str(cid))
-        c = db(); cats = c.execute("SELECT id, name FROM categories ORDER BY sort, id").fetchall(); c.close()
-        kb = InlineKeyboardMarkup(row_width=2)
-        kb.add(*[InlineKeyboardButton(r["name"], callback_data=f"setlogo_{r['id']}") for r in cats])
+        kb = InlineKeyboardMarkup(row_width=1)
+        kb.add(InlineKeyboardButton("🖼 Category logo အဖြစ် သတ်မှတ်မယ်", callback_data="pick_logo"))
+        kb.add(InlineKeyboardButton("🎨 Profile card icon အဖြစ် သတ်မှတ်မယ်", callback_data="pick_icon"))
         kb.add(InlineKeyboardButton("❌ Cancel", callback_data="setlogo_cancel"))
-        bot.send_message(msg.chat.id, "🎨 ဒီ animated emoji ကို ဘယ် category ရဲ့ logo အဖြစ် သတ်မှတ်မလဲ? Category ကို ရွေးပါ:", reply_markup=kb)
+        bot.send_message(msg.chat.id, "🎨 ဒီ animated emoji ကို ဘယ်နေရာမှာ သုံးမလဲ? ရွေးပါ:", reply_markup=kb)
 
     @bot.message_handler(func=lambda m: bool(m.text) and not m.text.startswith("/"), content_types=["text"])
     def dep_text(msg):
@@ -879,6 +1065,48 @@ if BOT_TOKEN:
             return
         s = tget(msg.from_user.id)
         if not s: return
+        if msg.from_user.id == ADMIN_TG_ID and s["step"] in ("deliver", "baladj"):
+            txt_in = (msg.text or "").strip()
+            if s["step"] == "deliver":
+                oid = s["method_id"]
+                c = db(); o = c.execute("SELECT * FROM orders WHERE id=? AND status='pending'", (oid,)).fetchone()
+                if o:
+                    c.execute("UPDATE orders SET status='delivered', delivery=? WHERE id=?", (txt_in, oid)); c.commit()
+                    buyer = o["user_id"]
+                    akb = InlineKeyboardMarkup()
+                    akb.add(InlineKeyboardButton(tr(buyer, 'appeal_btn'), callback_data="appeal"))
+                    akb.add(InlineKeyboardButton(tr(buyer, 'back'), callback_data="home"))
+                    dmsg = f"✅ <b>{tr(buyer, 'order_done').format(oid=oid)}</b>\n\n{hesc(txt_in)}" + tr(buyer, 'delivery_note')
+                    try: bot.send_message(buyer, dmsg, reply_markup=akb); log_chat(buyer, "out", plain(dmsg))
+                    except Exception: pass
+                    bot.send_message(msg.chat.id, f"✅ Order #{oid} ကို deliver လုပ်ပြီး ဝယ်သူဆီ ပို့ပေးပြီးပါပြီ")
+                else:
+                    bot.send_message(msg.chat.id, "⚠️ အဲဒီ order က pending မဟုတ်တော့ပါဘူး")
+                c.close()
+            else:
+                target = s["method_id"]
+                raw = txt_in.replace(",", "").replace(" ", "")
+                try: delta_mmk = int(raw)
+                except Exception: delta_mmk = None
+                if delta_mmk is None or delta_mmk == 0:
+                    bot.send_message(msg.chat.id, "⚠️ ပမာဏကို +5000 (သို့) -2000 လို ပို့ပါ")
+                    return
+                delta = delta_mmk * 100
+                c = db(); u = c.execute("SELECT * FROM users WHERE telegram_id=?", (target,)).fetchone()
+                if u:
+                    new_bal = max(0, u["balance_cents"] + delta)
+                    real_delta = new_bal - u["balance_cents"]
+                    c.execute("UPDATE users SET balance_cents=? WHERE telegram_id=?", (new_bal, target)); c.commit()
+                    log_event("balance_adjust", f"user={target} delta={real_delta} new={new_bal} via=telegram_admin")
+                    if real_delta != 0:
+                        signed = ("+" if real_delta > 0 else "−") + money(abs(real_delta))
+                        nmsg = STRINGS[ulang(target)]["bal_adj"].format(amt=signed, bal=money(new_bal))
+                        try: bot.send_message(target, nmsg); log_chat(target, "out", plain(nmsg))
+                        except Exception: pass
+                    bot.send_message(msg.chat.id, f"✅ Balance ပြင်ပြီးပါပြီ — အသစ်: <b>{money(new_bal)}</b>", parse_mode="HTML")
+                c.close()
+            tclear(msg.from_user.id)
+            return
         if s["step"] == "appeal":
             save_report(msg, msg.text or "")
             tclear(msg.from_user.id)
