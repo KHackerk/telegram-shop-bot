@@ -42,7 +42,7 @@
 <td>{% if brands[r.id] %}<img src="/brand-logo/{{ r.id }}" alt="" onerror="this.style.display='none'" style="height:26px;max-width:100px;object-fit:contain;background:rgba(255,255,255,.85);padding:3px 6px;border-radius:7px">{% elif logos[r.id] %}<img src="/logo-img/{{ logos[r.id] }}" alt="" style="height:30px;width:30px;object-fit:contain;border-radius:7px">{% else %}{{ r.emoji }}{% endif %}</td>
 <td><input name="cat_{{ r.id }}_name" value="{{ r.name }}"></td>
 <td><input name="cat_{{ r.id }}_emoji" value="{{ r.emoji }}" style="width:80px"></td>
-<td><select name="cat_{{ r.id }}_logo"><option value="">None — use emoji</option>{% for label, lid in logo_options %}<option value="{{ lid }}" {% if logos[r.id]==lid %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></td>
+<td><select name="cat_{{ r.id }}_logo"><option value="">None — use emoji</option>{% if logos[r.id] and logos[r.id] not in logo_ids %}<option value="{{ logos[r.id] }}" selected>Custom (set from Telegram)</option>{% endif %}{% for label, lid in logo_options %}<option value="{{ lid }}" {% if logos[r.id]==lid %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></td>
 <td style="white-space:nowrap">{% if r.hidden %}<span style="color:var(--dim);font-size:12.5px">Hidden</span> <a class="btn" href="/admin/categories/{{ r.id }}/toggle-hidden">Show</a>{% else %}<a class="btn red" href="/admin/categories/{{ r.id }}/toggle-hidden">Hide</a>{% endif %}</td>
 </tr>{% endfor %}</table>
 <button>Save categories</button> <button name=bulk value=hide class=red>Hide selected</button> <button name=bulk value=show>Show selected</button></form>
